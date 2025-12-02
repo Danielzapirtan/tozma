@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Depozite Materiale Cizmărie</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .controls {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+        
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            flex: 1;
+            min-width: 150px;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        #map {
+            height: 500px;
+            width: 100%;
+        }
+        
+        .results {
+            padding: 30px;
+        }
+        
+        .results h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        
+        .store-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+        
+        .store-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .store-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 15px;
+        }
+        
+        .store-name {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        
+        .distance {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+        
+        .store-info {
+            color: #555;
+            line-height: 1.8;
+        }
+        
+        .store-info strong {
+            color: #2c3e50;
+        }
+        
+        .loader {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+        
+        .loader.active {
+            display: block;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+        
+        .error {
+            background: #e74c3c;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 30px;
+            display: none;
+        }
+        
+        .error.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🥾 Depozite Materiale Cizmărie</h1>
+            <p>Găsește furnituri pe traseul tău</p>
+        </div>
+        
+        <div class="controls">
+            <div class="input-group">
+                <label for="start">Locația de pornire:</label>
+                <input type="text" id="start" placeholder="ex: București, Piața Unirii">
+            </div>
+            
+            <div class="input-group">
+                <label for="destination">Destinație:</label>
+                <input type="text" id="destination" placeholder="ex: Ploiești">
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn btn-primary" id="searchBtn">Caută Depozite</button>
+                <button class="btn btn-secondary" id="useLocationBtn">Folosește Locația Mea</button>
+            </div>
+        </div>
+        
+        <div class="error" id="error"></div>
+        
+        <div class="loader" id="loader">
+            <div class="spinner"></div>
+            <p>Se caută depozite de materiale...</p>
+        </div>
+        
+        <div id="map"></div>
+        
+        <div class="results" id="results"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let map;
+        let markersLayer;
+        
+        function initMap() {
+            map = L.map('map').setView([45.9432, 24.9668], 7);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            markersLayer = L.layerGroup().addTo(map);
+        }
+        
+        async function geocode(address) {
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=ro&limit=1`
+            );
+            const data = await response.json();
+            if (data.length > 0) {
+                return {
+                    lat: parseFloat(data[0].lat),
+                    lon: parseFloat(data[0].lon)
+                };
+            }
+            throw new Error('Locația nu a fost găsită');
+        }
+        
+        async function findStoresAlongRoute(start, end) {
+            const bbox = getBoundingBox(start, end);
+            
+            // Căutăm magazine de materiale, depozite, magazine de piele și accesorii
+            const query = `
+                [out:json][timeout:25];
+                (
+                  node["shop"="leather"](${bbox});
+                  node["shop"="fabric"](${bbox});
+                  node["shop"="hardware"](${bbox});
+                  node["craft"="shoemaker"](${bbox});
+                  node["shop"="shoes"]["repair"="yes"](${bbox});
+                  way["shop"="leather"](${bbox});
+                  way["shop"="fabric"](${bbox});
+                  way["shop"="hardware"](${bbox});
+                  way["craft"="shoemaker"](${bbox});
+                );
+                out center;
+            `;
+            
+            const response = await fetch('https://overpass-api.de/api/interpreter', {
+                method: 'POST',
+                body: query
+            });
+            
+            const data = await response.json();
+            return processStores(data.elements, start, end);
+        }
+        
+        function getBoundingBox(start, end) {
+            const latMin = Math.min(start.lat, end.lat) - 0.1;
+            const latMax = Math.max(start.lat, end.lat) + 0.1;
+            const lonMin = Math.min(start.lon, end.lon) - 0.1;
+            const lonMax = Math.max(start.lon, end.lon) + 0.1;
+            return `${latMin},${lonMin},${latMax},${lonMax}`;
+        }
+        
+        function processStores(elements, start, end) {
+            const stores = [];
+            
+            elements.forEach(element => {
+                const lat = element.lat || (element.center && element.center.lat);
+                const lon = element.lon || (element.center && element.center.lon);
+                
+                if (!lat || !lon) return;
+                
+                const distanceFromStart = calculateDistance(start.lat, start.lon, lat, lon);
+                const distanceFromEnd = calculateDistance(end.lat, end.lon, lat, lon);
+                const directDistance = calculateDistance(start.lat, start.lon, end.lat, end.lon);
+                
+                // Verificăm dacă magazinul e aproximativ pe traseu
+                if (distanceFromStart + distanceFromEnd < directDistance * 1.3) {
+                    stores.push({
+                        name: element.tags.name || getStoreName(element.tags),
+                        lat: lat,
+                        lon: lon,
+                        distance: distanceFromStart,
+                        address: formatAddress(element.tags),
+                        phone: element.tags.phone || 'Nu este disponibil',
+                        opening_hours: element.tags.opening_hours || 'Nu sunt disponibile',
+                        type: getStoreType(element.tags),
+                        website: element.tags.website || element.tags['contact:website'] || null
+                    });
+                }
+            });
+            
+            return stores.sort((a, b) => a.distance - b.distance);
+        }
+        
+        function getStoreName(tags) {
+            if (tags.craft === 'shoemaker') return 'Atelier Cizmărie';
+            if (tags.shop === 'leather') return 'Magazin Materiale Piele';
+            if (tags.shop === 'fabric') return 'Magazin Textile';
+            if (tags.shop === 'hardware') return 'Magazin Feronerie';
+            return 'Furnizor Materiale';
+        }
+        
+        function getStoreType(tags) {
+            if (tags.craft === 'shoemaker') return '👞 Atelier cizmărie';
+            if (tags.shop === 'leather') return '🧳 Materiale din piele';
+            if (tags.shop === 'fabric') return '🧵 Textile și stofe';
+            if (tags.shop === 'hardware') return '🔧 Feronerie';
+            return '🏪 Furnizor materiale';
+        }
+        
+        function formatAddress(tags) {
+            const parts = [];
+            if (tags['addr:street']) parts.push(tags['addr:street']);
+            if (tags['addr:housenumber']) parts.push(tags['addr:housenumber']);
+            if (tags['addr:city']) parts.push(tags['addr:city']);
+            return parts.length > 0 ? parts.join(', ') : 'Adresă nedisponibilă';
+        }
+        
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = toRad(lat2 - lat1);
+            const dLon = toRad(lon2 - lon1);
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                     Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+        
+        function toRad(degrees) {
+            return degrees * Math.PI / 180;
+        }
+        
+        function displayResults(stores, start, end) {
+            const resultsDiv = document.getElementById('results');
+            markersLayer.clearLayers();
+            
+            if (stores.length === 0) {
+                resultsDiv.innerHTML = '<div class="no-results">Nu s-au găsit depozite pe traseu. Încercați un traseu diferit.</div>';
+                return;
+            }
+            
+            let html = `<h2>Am găsit ${stores.length} depozit(e) pe traseu:</h2>`;
+            
+            // Adăugăm markere pe hartă
+            const startMarker = L.marker([start.lat, start.lon], {
+                icon: L.divIcon({
+                    className: 'custom-marker',
+                    html: '🏁',
+                    iconSize: [30, 30]
+                })
+            }).addTo(markersLayer);
+            startMarker.bindPopup('Start');
+            
+            const endMarker = L.marker([end.lat, end.lon], {
+                icon: L.divIcon({
+                    className: 'custom-marker',
+                    html: '🎯',
+                    iconSize: [30, 30]
+                })
+            }).addTo(markersLayer);
+            endMarker.bindPopup('Destinație');
+            
+            stores.forEach((store, index) => {
+                const marker = L.marker([store.lat, store.lon]).addTo(markersLayer);
+                marker.bindPopup(`<strong>${store.name}</strong><br>${store.type}`);
+                
+                html += `
+                    <div class="store-card">
+                        <div class="store-header">
+                            <div class="store-name">${index + 1}. ${store.name}</div>
+                            <div class="distance">${store.distance.toFixed(1)} km</div>
+                        </div>
+                        <div class="store-info">
+                            <p><strong>Tip:</strong> ${store.type}</p>
+                            <p><strong>Adresă:</strong> ${store.address}</p>
+                            <p><strong>Telefon:</strong> ${store.phone}</p>
+                            <p><strong>Program:</strong> ${store.opening_hours}</p>
+                            ${store.website ? `<p><strong>Website:</strong> <a href="${store.website}" target="_blank">${store.website}</a></p>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            resultsDiv.innerHTML = html;
+            
+            // Ajustăm harta pentru a vedea toate punctele
+            const bounds = L.latLngBounds([
+                [start.lat, start.lon],
+                [end.lat, end.lon],
+                ...stores.map(s => [s.lat, s.lon])
+            ]);
+            map.fitBounds(bounds, { padding: [50, 50] });
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('active');
+            setTimeout(() => errorDiv.classList.remove('active'), 5000);
+        }
+        
+        function showLoader(show) {
+            document.getElementById('loader').classList.toggle('active', show);
+        }
+        
+        document.getElementById('searchBtn').addEventListener('click', async () => {
+            const startAddr = document.getElementById('start').value.trim();
+            const destAddr = document.getElementById('destination').value.trim();
+            
+            if (!startAddr || !destAddr) {
+                showError('Vă rugăm completați ambele câmpuri!');
+                return;
+            }
+            
+            try {
+                showLoader(true);
+                document.getElementById('results').innerHTML = '';
+                
+                const start = await geocode(startAddr);
+                const dest = await geocode(destAddr);
+                const stores = await findStoresAlongRoute(start, dest);
+                
+                displayResults(stores, start, dest);
+            } catch (error) {
+                showError('Eroare: ' + error.message);
+            } finally {
+                showLoader(false);
+            }
+        });
+        
+        document.getElementById('useLocationBtn').addEventListener('click', () => {
+            if (!navigator.geolocation) {
+                showError('Browserul dvs. nu suportă geolocalizarea');
+                return;
+            }
+            
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    try {
+                        const response = await fetch(
+                            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}`
+                        );
+                        const data = await response.json();
+                        document.getElementById('start').value = data.display_name;
+                    } catch (error) {
+                        showError('Nu s-a putut determina adresa curentă');
+                    }
+                },
+                () => showError('Nu s-a putut accesa locația. Verificați permisiunile browserului.')
+            );
+        });
+        
+        initMap();
+    </script>
+</body>
+</html>
