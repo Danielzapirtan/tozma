@@ -300,15 +300,12 @@
             const query = `
                 [out:json][timeout:25];
                 (
-                  node["shop"="leather"](${bbox});
-                  node["shop"="fabric"](${bbox});
                   node["shop"="materials"](${bbox});
+                  node["shop"="sole"](${bbox});
                   node["craft"="shoemaking"](${bbox});
-                  node["shop"="shoes"]["repair"="yes"](${bbox});
-                  way["shop"="leather"](${bbox});
-                  way["shop"="fabric"](${bbox});
                   way["shop"="materials"](${bbox});
                   way["craft"="shoemaking"](${bbox});
+                  way["shop"="sole"](${bbox});
                 );
                 out center;
             `;
