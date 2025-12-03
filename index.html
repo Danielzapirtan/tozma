@@ -75,6 +75,29 @@
             outline: none;
             border-color: #667eea;
         }
+
+        .radius-group {
+            margin-bottom: 20px;
+        }
+
+        .radius-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .radius-slider {
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        .radius-value {
+            text-align: center;
+            font-weight: 600;
+            color: #667eea;
+            margin-top: 5px;
+        }
         
         .btn-group {
             display: flex;
@@ -268,24 +291,39 @@
             color: #e74c3c;
             font-weight: bold;
         }
+
+        .center-marker {
+            border: 3px solid #2c3e50;
+            background: #34495e;
+            color: white;
+            font-weight: bold;
+        }
+
+        .radius-circle {
+            stroke: #667eea;
+            stroke-width: 2;
+            stroke-dasharray: 5, 5;
+            fill: rgba(102, 126, 234, 0.1);
+            fill-opacity: 0.3;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>🥾 Depozite Materiale Cizmărie</h1>
-            <p>Găsește furnituri pe traseul tău</p>
+            <p>Găsește furnituri în zona ta</p>
         </div>
         
         <div class="controls">
             <div class="input-group">
-                <label for="start">Locația de pornire:</label>
-                <input type="text" id="start" value="București, Piața Unirii">
+                <label for="location">Locația de căutare:</label>
+                <input type="text" id="location" value="București, Piața Unirii">
             </div>
-            
-            <div class="input-group">
-                <label for="destination">Destinație:</label>
-                <input type="text" id="destination" value="Ploiești">
+
+            <div class="radius-group">
+                <label for="radius">Rază de căutare: <span id="radiusValue">10</span> km</label>
+                <input type="range" id="radius" class="radius-slider" min="1" max="50" value="10">
             </div>
             
             <div class="btn-group">
@@ -310,6 +348,8 @@
     <script>
         let map;
         let markersLayer;
+        let radiusCircle;
+        let centerMarker;
         
         function initMap() {
             map = L.map('map').setView([45.9432, 24.9668], 7);
@@ -330,7 +370,8 @@
                 if (data.length > 0) {
                     return {
                         lat: parseFloat(data[0].lat),
-                        lon: parseFloat(data[0].lon)
+                        lon: parseFloat(data[0].lon),
+                        display_name: data[0].display_name
                     };
                 }
                 throw new Error('Locația nu a fost găsită');
@@ -339,8 +380,16 @@
             }
         }
         
-        async function findStoresAlongRoute(start, end) {
-            const bbox = getBoundingBox(start, end);
+        async function findStoresAroundLocation(center, radiusKm) {
+            // Convert radius from km to degrees (approximate)
+            const radiusDeg = radiusKm / 111.32;
+            
+            const bbox = [
+                center.lat - radiusDeg,
+                center.lon - radiusDeg,
+                center.lat + radiusDeg,
+                center.lon + radiusDeg
+            ].join(',');
             
             // Căutăm magazine relevante pentru cizmărie
             const query = `
@@ -350,10 +399,14 @@
                   node["shop"="fabric"](${bbox});
                   node["shop"="hardware"](${bbox});
                   node["craft"="shoemaker"](${bbox});
+                  node["shop"="craft"](${bbox});
+                  node["shop"="shoes"](${bbox});
                   way["shop"="leather"](${bbox});
                   way["shop"="fabric"](${bbox});
                   way["shop"="hardware"](${bbox});
                   way["craft"="shoemaker"](${bbox});
+                  way["shop"="craft"](${bbox});
+                  way["shop"="shoes"](${bbox});
                 );
                 out center;
             `;
@@ -364,18 +417,10 @@
             });
             
             const data = await response.json();
-            return processStores(data.elements, start, end);
+            return processStores(data.elements, center, radiusKm);
         }
         
-        function getBoundingBox(start, end) {
-            const latMin = Math.min(start.lat, end.lat) - 0.1;
-            const latMax = Math.max(start.lat, end.lat) + 0.1;
-            const lonMin = Math.min(start.lon, end.lon) - 0.1;
-            const lonMax = Math.max(start.lon, end.lon) + 0.1;
-            return `${latMin},${lonMin},${latMax},${lonMax}`;
-        }
-        
-        function processStores(elements, start, end) {
+        function processStores(elements, center, radiusKm) {
             const stores = [];
             
             elements.forEach(element => {
@@ -384,12 +429,10 @@
                 
                 if (!lat || !lon) return;
                 
-                const distanceFromStart = calculateDistance(start.lat, start.lon, lat, lon);
-                const distanceFromEnd = calculateDistance(end.lat, end.lon, lat, lon);
-                const directDistance = calculateDistance(start.lat, start.lon, end.lat, end.lon);
+                const distance = calculateDistance(center.lat, center.lon, lat, lon);
                 
-                // Verificăm dacă magazinul e aproximativ pe traseu
-                if (distanceFromStart + distanceFromEnd < directDistance * 1.3) {
+                // Verificăm dacă magazinul se află în raza specificată
+                if (distance <= radiusKm) {
                     const type = getStoreType(element.tags);
                     const name = element.tags.name || getStoreName(element.tags);
                     
@@ -397,7 +440,7 @@
                         name: name,
                         lat: lat,
                         lon: lon,
-                        distance: distanceFromStart,
+                        distance: distance,
                         address: formatAddress(element.tags),
                         phone: element.tags.phone || 'Nu este disponibil',
                         opening_hours: element.tags.opening_hours || 'Nu sunt disponibile',
@@ -415,6 +458,8 @@
             if (tags.shop === 'leather') return 'Magazin Materiale Piele';
             if (tags.shop === 'fabric') return 'Magazin Textile';
             if (tags.shop === 'hardware') return 'Magazin Feronerie';
+            if (tags.shop === 'craft') return 'Atelier Meșteșugăresc';
+            if (tags.shop === 'shoes') return 'Magazin Încălțăminte';
             return 'Furnizor Materiale';
         }
         
@@ -423,6 +468,8 @@
             if (tags.shop === 'leather') return '🧳 Materiale din piele';
             if (tags.shop === 'fabric') return '🧵 Textile și stofe';
             if (tags.shop === 'hardware') return '🔧 Feronerie';
+            if (tags.shop === 'craft') return '🛠️ Atelier meșteșugăresc';
+            if (tags.shop === 'shoes') return '👟 Încălțăminte și accesorii';
             return '🏪 Furnizor materiale';
         }
         
@@ -449,41 +496,45 @@
             return degrees * Math.PI / 180;
         }
         
-        function displayResults(stores, start, end) {
+        function displayResults(stores, center, radius) {
             const resultsDiv = document.getElementById('results');
             markersLayer.clearLayers();
             
+            if (radiusCircle) {
+                map.removeLayer(radiusCircle);
+            }
+            
+            // Adaugă cercul razei
+            radiusCircle = L.circle([center.lat, center.lon], {
+                radius: radius * 1000,
+                className: 'radius-circle'
+            }).addTo(map);
+            
+            // Adăugă marker pentru centru
+            centerMarker = L.marker([center.lat, center.lon], {
+                icon: L.divIcon({
+                    className: 'custom-marker center-marker',
+                    html: '📍',
+                    iconSize: [40, 40]
+                })
+            }).addTo(markersLayer);
+            centerMarker.bindPopup(`<strong>Centru căutare</strong><br>${center.display_name || 'Locație'}<br>Rază: ${radius} km`);
+            
             if (stores.length === 0) {
-                resultsDiv.innerHTML = '<div class="no-results">Nu s-au găsit depozite pe traseu. Încercați un traseu diferit.</div>';
+                resultsDiv.innerHTML = `<div class="no-results">Nu s-au găsit depozite în raza de ${radius} km. Încercați să măriți raza de căutare.</div>`;
                 return;
             }
             
-            let html = `<h2>Am găsit ${stores.length} depozit(e) pe traseu:</h2>`;
+            let html = `<h2>Am găsit ${stores.length} depozit(e) în raza de ${radius} km:</h2>`;
             
-            // Adăugăm markere pe hartă
-            const startMarker = L.marker([start.lat, start.lon], {
-                icon: L.divIcon({
-                    className: 'custom-marker',
-                    html: '🏁',
-                    iconSize: [40, 40]
-                })
-            }).addTo(markersLayer);
-            startMarker.bindPopup('Start');
-            
-            const endMarker = L.marker([end.lat, end.lon], {
-                icon: L.divIcon({
-                    className: 'custom-marker',
-                    html: '🎯',
-                    iconSize: [40, 40]
-                })
-            }).addTo(markersLayer);
-            endMarker.bindPopup('Destinație');
-            
+            // Adăugăm markere pe hartă pentru magazine
             stores.forEach((store, index) => {
                 const isDepozitCizmarie = store.type.includes('Depozit materiale cizmărie') || 
                                          store.name.toLowerCase().includes('cizmărie') ||
                                          store.name.toLowerCase().includes('cizmarie') ||
-                                         store.type.includes('cizmărie');
+                                         store.type.includes('cizmărie') ||
+                                         store.name.toLowerCase().includes('piele') ||
+                                         store.type.includes('piele');
 
                 // Creare marker special pentru depozite de cizmărie
                 const markerIcon = isDepozitCizmarie 
@@ -499,7 +550,7 @@
                     });
 
                 const marker = L.marker([store.lat, store.lon], { icon: markerIcon }).addTo(markersLayer);
-                marker.bindPopup(`<strong>${store.name}</strong><br>${store.type}`);
+                marker.bindPopup(`<strong>${store.name}</strong><br>${store.type}<br>Distanță: ${store.distance.toFixed(1)} km`);
                 
                 const cardClass = isDepozitCizmarie ? 'store-card depozit-cizmarie' : 'store-card';
                 
@@ -523,12 +574,15 @@
             resultsDiv.innerHTML = html;
             
             // Ajustăm harta pentru a vedea toate punctele
-            const bounds = L.latLngBounds([
-                [start.lat, start.lon],
-                [end.lat, end.lon],
-                ...stores.map(s => [s.lat, s.lon])
-            ]);
-            map.fitBounds(bounds, { padding: [50, 50] });
+            if (stores.length > 0) {
+                const bounds = L.latLngBounds([
+                    [center.lat, center.lon],
+                    ...stores.map(s => [s.lat, s.lon])
+                ]);
+                map.fitBounds(bounds, { padding: [50, 50] });
+            } else {
+                map.setView([center.lat, center.lon], 12);
+            }
         }
         
         function showError(message) {
@@ -543,11 +597,11 @@
         }
         
         document.getElementById('searchBtn').addEventListener('click', async () => {
-            const startAddr = document.getElementById('start').value.trim();
-            const destAddr = document.getElementById('destination').value.trim();
+            const locationAddr = document.getElementById('location').value.trim();
+            const radius = parseInt(document.getElementById('radius').value);
             
-            if (!startAddr || !destAddr) {
-                showError('Vă rugăm completați ambele câmpuri!');
+            if (!locationAddr) {
+                showError('Vă rugăm introduceți o locație!');
                 return;
             }
             
@@ -555,11 +609,10 @@
                 showLoader(true);
                 document.getElementById('results').innerHTML = '';
                 
-                const start = await geocode(startAddr);
-                const dest = await geocode(destAddr);
-                const stores = await findStoresAlongRoute(start, dest);
+                const center = await geocode(locationAddr);
+                const stores = await findStoresAroundLocation(center, radius);
                 
-                displayResults(stores, start, dest);
+                displayResults(stores, center, radius);
             } catch (error) {
                 showError('Eroare: ' + error.message);
             } finally {
@@ -580,13 +633,17 @@
                             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}`
                         );
                         const data = await response.json();
-                        document.getElementById('start').value = data.display_name;
+                        document.getElementById('location').value = data.display_name;
                     } catch (error) {
                         showError('Nu s-a putut determina adresa curentă');
                     }
                 },
                 () => showError('Nu s-a putut accesa locația. Verificați permisiunile browserului.')
             );
+        });
+        
+        document.getElementById('radius').addEventListener('input', function() {
+            document.getElementById('radiusValue').textContent = this.value;
         });
         
         initMap();
