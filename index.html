@@ -6,393 +6,87 @@
     <title>Depozite Materiale Cizmărie</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            overflow: hidden;
-        }
-        
-        .header {
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-        
-        .header h1 {
-            font-size: 2em;
-            margin-bottom: 10px;
-        }
-        
-        .header p {
-            opacity: 0.9;
-            font-size: 1.1em;
-        }
-        
-        .controls {
-            padding: 30px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #e0e0e0;
-        }
-        
-        .input-group {
-            margin-bottom: 20px;
-        }
-        
-        .input-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #2c3e50;
-        }
-        
-        .input-group input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #ddd;
-            border-radius: 10px;
-            font-size: 1em;
-            transition: border-color 0.3s;
-        }
-        
-        .input-group input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .radius-group {
-            margin-bottom: 20px;
-        }
-
-        .radius-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #2c3e50;
-        }
-
-        .radius-slider {
-            width: 100%;
-            margin: 10px 0;
-        }
-
-        .radius-value {
-            text-align: center;
-            font-weight: 600;
-            color: #667eea;
-            margin-top: 5px;
-        }
-        
-        .btn-group {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-        
-        .btn {
-            flex: 1;
-            min-width: 150px;
-            padding: 15px 30px;
-            border: none;
-            border-radius: 10px;
-            font-size: 1em;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
-        }
-        
-        .btn-secondary {
-            background: #95a5a6;
-            color: white;
-        }
-        
-        .btn-secondary:hover {
-            background: #7f8c8d;
-        }
-        
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-        
-        #map {
-            height: 500px;
-            width: 100%;
-        }
-        
-        .results {
-            padding: 30px;
-        }
-        
-        .results h2 {
-            color: #2c3e50;
-            margin-bottom: 20px;
-            font-size: 1.5em;
-        }
-        
-        .store-card {
-            background: white;
-            border: 2px solid #e0e0e0;
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-            transition: all 0.3s;
-        }
-        
-        .store-card:hover {
-            border-color: #667eea;
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
-            transform: translateY(-2px);
-        }
-        
-        .depozit-cizmarie {
-            border: 3px solid #e74c3c;
-            background: linear-gradient(135deg, #fff5f5 0%, #ffeaea 100%);
-            position: relative;
-        }
-        
-        .depozit-cizmarie::before {
-            content: '🥾 SPECIAL';
-            position: absolute;
-            top: -12px;
-            right: 20px;
-            background: #e74c3c;
-            color: white;
-            padding: 3px 10px;
-            border-radius: 15px;
-            font-size: 0.8em;
-            font-weight: bold;
-        }
-        
-        .store-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: start;
-            margin-bottom: 15px;
-        }
-        
-        .store-name {
-            font-size: 1.3em;
-            font-weight: 700;
-            color: #2c3e50;
-        }
-        
-        .distance {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 0.9em;
-        }
-        
-        .store-info {
-            color: #555;
-            line-height: 1.8;
-        }
-        
-        .store-info strong {
-            color: #2c3e50;
-        }
-        
-        .loader {
-            text-align: center;
-            padding: 40px;
-            display: none;
-        }
-        
-        .loader.active {
-            display: block;
-        }
-        
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .no-results {
-            text-align: center;
-            padding: 40px;
-            color: #7f8c8d;
-            font-size: 1.1em;
-        }
-        
-        .error {
-            background: #e74c3c;
-            color: white;
-            padding: 15px;
-            border-radius: 10px;
-            margin: 20px 30px;
-            display: none;
-        }
-        
-        .error.active {
-            display: block;
-        }
-
-        /* CSS pentru markere personalizate */
-        .custom-marker {
-            background: white;
-            border-radius: 50%;
-            border: 2px solid #667eea;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            width: 40px !important;
-            height: 40px !important;
-            line-height: 40px;
-            text-align: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-        }
-        
-        .depozit-marker {
-            border: 3px solid #e74c3c;
-            background: #fff5f5;
-            color: #e74c3c;
-            font-weight: bold;
-        }
-
-        .center-marker {
-            border: 3px solid #2c3e50;
-            background: #34495e;
-            color: white;
-            font-weight: bold;
-        }
-
-        .radius-circle {
-            stroke: #667eea;
-            stroke-width: 2;
-            stroke-dasharray: 5, 5;
-            fill: rgba(102, 126, 234, 0.1);
-            fill-opacity: 0.3;
-        }
+        *{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;padding:20px}
+        .container{max-width:1200px;margin:0 auto;background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden}
+        .header{background:linear-gradient(135deg,#2c3e50,#34495e);color:#fff;padding:30px;text-align:center}
+        .header h1{font-size:2em;margin-bottom:10px}.header p{opacity:.9;font-size:1.1em}
+        .controls{padding:30px;background:#f8f9fa;border-bottom:1px solid #e0e0e0}
+        .input-group,.radius-group{margin-bottom:20px}
+        .input-group label,.radius-group label{display:block;margin-bottom:8px;font-weight:600;color:#2c3e50}
+        .input-group input{width:100%;padding:12px 15px;border:2px solid #ddd;border-radius:10px;font-size:1em;transition:border-color .3s}
+        .input-group input:focus{border-color:#667eea;outline:0}
+        .radius-slider{width:100%;margin:10px 0}.radius-value{text-align:center;font-weight:600;color:#667eea;margin-top:5px}
+        .btn-group{display:flex;gap:15px;flex-wrap:wrap}
+        .btn{flex:1;min-width:150px;padding:15px 30px;border:none;border-radius:10px;font-size:1em;font-weight:600;cursor:pointer;transition:.3s;text-transform:uppercase;letter-spacing:.5px}
+        .btn-primary{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
+        .btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 20px rgba(102,126,234,.4)}
+        .btn-secondary{background:#95a5a6;color:#fff}
+        .btn-secondary:hover{background:#7f8c8d}
+        .btn:disabled{opacity:.5;cursor:not-allowed}
+        #map{height:500px;width:100%}
+        .results{padding:30px}.results h2{color:#2c3e50;margin-bottom:20px;font-size:1.5em}
+        .store-card{background:#fff;border:2px solid #e0e0e0;border-radius:15px;padding:20px;margin-bottom:20px;transition:.3s}
+        .store-card:hover{border-color:#667eea;box-shadow:0 5px 15px rgba(102,126,234,.2);transform:translateY(-2px)}
+        .depozit-cizmarie{border:3px solid #e74c3c;background:linear-gradient(135deg,#fff5f5,#ffeaea);position:relative}
+        .depozit-cizmarie:before{content:"🥾 SPECIAL";position:absolute;top:-12px;right:20px;background:#e74c3c;color:#fff;padding:3px 10px;border-radius:15px;font-size:.8em;font-weight:700}
+        .store-header{display:flex;justify-content:space-between;align-items:start;margin-bottom:15px}
+        .store-name{font-size:1.3em;font-weight:700;color:#2c3e50}.distance{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:5px 15px;border-radius:20px;font-weight:600;font-size:.9em}
+        .store-info{color:#555;line-height:1.8}.store-info strong{color:#2c3e50}
+        .loader{text-align:center;padding:40px;display:none}.loader.active{display:block}
+        .spinner{border:4px solid #f3f3f3;border-top:4px solid #667eea;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;margin:0 auto 20px}
+        @keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+        .no-results{text-align:center;padding:40px;color:#7f8c8d;font-size:1.1em}
+        .error{background:#e74c3c;color:#fff;padding:15px;border-radius:10px;margin:20px 30px;display:none}
+        .error.active{display:block}
+        .custom-marker{background:#fff;border-radius:50%;border:2px solid #667eea;display:flex;align-items:center;justify-content:center;font-size:20px;width:40px!important;height:40px!important;line-height:40px;text-align:center;box-shadow:0 2px 5px rgba(0,0,0,.3)}
+        .depozit-marker{border:3px solid #e74c3c;background:#fff5f5;color:#e74c3c;font-weight:700}
+        .center-marker{border:3px solid #2c3e50;background:#34495e;color:#fff;font-weight:700}
+        .radius-circle{stroke:#667eea;stroke-width:2;stroke-dasharray:5,5;fill:rgba(102,126,234,.1);fill-opacity:.3}
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>🥾 Depozite Materiale Cizmărie</h1>
-            <p>Găsește furnituri în zona ta</p>
-        </div>
-        
+        <div class="header"><h1>🥾 Depozite Materiale Cizmărie</h1><p>Găsește furnituri în zona ta</p></div>
         <div class="controls">
-            <div class="input-group">
-                <label for="location">Locația de căutare:</label>
-                <input type="text" id="location" value="București, Piața Unirii">
+            <div class="input-group"><label for="location">Locația de căutare:</label>
+                <input id="location" value="București, Piața Unirii">
             </div>
-
             <div class="radius-group">
                 <label for="radius">Rază de căutare: <span id="radiusValue">10</span> km</label>
-                <input type="range" id="radius" class="radius-slider" min="1" max="50" value="10">
+                <input type="range" id="radius" min="1" max="50" value="10" class="radius-slider">
             </div>
-            
             <div class="btn-group">
                 <button class="btn btn-primary" id="searchBtn">Caută Depozite</button>
                 <button class="btn btn-secondary" id="useLocationBtn">Folosește Locația Mea</button>
             </div>
         </div>
-        
         <div class="error" id="error"></div>
-        
-        <div class="loader" id="loader">
-            <div class="spinner"></div>
-            <p>Se caută depozite de materiale...</p>
-        </div>
-        
+        <div class="loader" id="loader"><div class="spinner"></div><p>Se caută depozite de materiale...</p></div>
         <div id="map"></div>
-        
         <div class="results" id="results"></div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        let map;
-        let markersLayer;
-        let radiusCircle;
-        let centerMarker;
-        
-        function initMap() {
-            map = L.map('map').setView([45.9432, 24.9668], 7);
-            
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
-            }).addTo(map);
-            
-            markersLayer = L.layerGroup().addTo(map);
+        let map, markersLayer, radiusCircle, centerMarker;
+
+        function initMap(){
+            map=L.map('map').setView([45.9432,24.9668],7);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map);
+            markersLayer=L.layerGroup().addTo(map);
         }
-        
-        async function geocode(address) {
-            try {
-                const response = await fetch(
-                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=ro&limit=1`
-                );
-                const data = await response.json();
-                if (data.length > 0) {
-                    return {
-                        lat: parseFloat(data[0].lat),
-                        lon: parseFloat(data[0].lon),
-                        display_name: data[0].display_name
-                    };
-                }
-                throw new Error('Locația nu a fost găsită');
-            } catch (error) {
-                throw new Error('Eroare la geocodare: ' + error.message);
-            }
+
+        async function geocode(address){
+            const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=ro&limit=1`);
+            const d=await r.json();
+            if(d.length===0)throw new Error("Locația nu a fost găsită");
+            return {lat:+d[0].lat,lon:+d[0].lon,display_name:d[0].display_name};
         }
-        
-        async function findStoresAroundLocation(center, radiusKm) {
-            // Convert radius from km to degrees (approximate)
-            const radiusDeg = radiusKm / 111.32;
-            
-            const bbox = [
-                center.lat - radiusDeg,
-                center.lon - radiusDeg,
-                center.lat + radiusDeg,
-                center.lon + radiusDeg
-            ].join(',');
-            
-            // Căutăm magazine relevante pentru cizmărie
-            const query = `
+
+        async function findStoresAroundLocation(center,radiusKm){
+            const deg=radiusKm/111.32;
+            const bbox=[center.lat-deg,center.lon-deg,center.lat+deg,center.lon+deg].join(',');
+            const query=`
                 [out:json][timeout:25];
                 (
                   node["shop"="leather"](${bbox});
@@ -408,244 +102,146 @@
                   way["shop"="craft"](${bbox});
                   way["shop"="shoes"](${bbox});
                 );
-                out center;
-            `;
-            
-            const response = await fetch('https://overpass-api.de/api/interpreter', {
-                method: 'POST',
-                body: query
-            });
-            
-            const data = await response.json();
-            return processStores(data.elements, center, radiusKm);
+                out center;`;
+            const r=await fetch("https://overpass-api.de/api/interpreter",{method:"POST",body:query});
+            const d=await r.json();
+            return processStores(d.elements,center,radiusKm);
         }
-        
-        function processStores(elements, center, radiusKm) {
-            const stores = [];
-            
-            elements.forEach(element => {
-                const lat = element.lat || (element.center && element.center.lat);
-                const lon = element.lon || (element.center && element.center.lon);
-                
-                if (!lat || !lon) return;
-                
-                const distance = calculateDistance(center.lat, center.lon, lat, lon);
-                
-                // Verificăm dacă magazinul se află în raza specificată
-                if (distance <= radiusKm) {
-                    const type = getStoreType(element.tags);
-                    const name = element.tags.name || getStoreName(element.tags);
-                    
-                    stores.push({
-                        name: name,
-                        lat: lat,
-                        lon: lon,
-                        distance: distance,
-                        address: formatAddress(element.tags),
-                        phone: element.tags.phone || 'Nu este disponibil',
-                        opening_hours: element.tags.opening_hours || 'Nu sunt disponibile',
-                        type: type,
-                        website: element.tags.website || element.tags['contact:website'] || null
-                    });
-                }
-            });
-            
-            return stores.sort((a, b) => a.distance - b.distance);
+
+        function processStores(els,center,radiusKm){
+            const arr=[];
+            for(const e of els){
+                const lat=e.lat||(e.center&&e.center.lat);
+                const lon=e.lon||(e.center&&e.center.lon);
+                if(!lat||!lon)continue;
+                const dist=distance(center.lat,center.lon,lat,lon);
+                if(dist>radiusKm)continue;
+                const tags=e.tags||{};
+                arr.push({
+                    name: tags.name||nameFrom(tags),
+                    lat,lon,
+                    distance:dist,
+                    address:addressFrom(tags),
+                    phone:tags.phone||"Nu este disponibil",
+                    opening_hours:tags.opening_hours||"Nu sunt disponibile",
+                    type:typeFrom(tags),
+                    website:tags.website||tags["contact:website"]||null
+                });
+            }
+            return arr.sort((a,b)=>a.distance-b.distance);
         }
-        
-        function getStoreName(tags) {
-            if (tags.craft === 'shoemaker') return 'Atelier Cizmărie';
-            if (tags.shop === 'leather') return 'Magazin Materiale Piele';
-            if (tags.shop === 'fabric') return 'Magazin Textile';
-            if (tags.shop === 'hardware') return 'Magazin Feronerie';
-            if (tags.shop === 'craft') return 'Atelier Meșteșugăresc';
-            if (tags.shop === 'shoes') return 'Magazin Încălțăminte';
-            return 'Furnizor Materiale';
+
+        function nameFrom(t){
+            if(t.craft==="shoemaker")return"Atelier Cizmărie";
+            if(t.shop==="leather")return"Magazin Materiale Piele";
+            if(t.shop==="fabric")return"Magazin Textile";
+            if(t.shop==="hardware")return"Magazin Feronerie";
+            if(t.shop==="craft")return"Atelier Meșteșugăresc";
+            if(t.shop==="shoes")return"Magazin Încălțăminte";
+            return"Furnizor Materiale";
         }
-        
-        function getStoreType(tags) {
-            if (tags.craft === 'shoemaker') return '👞 Depozit materiale cizmărie';
-            if (tags.shop === 'leather') return '🧳 Materiale din piele';
-            if (tags.shop === 'fabric') return '🧵 Textile și stofe';
-            if (tags.shop === 'hardware') return '🔧 Feronerie';
-            if (tags.shop === 'craft') return '🛠️ Atelier meșteșugăresc';
-            if (tags.shop === 'shoes') return '👟 Încălțăminte și accesorii';
-            return '🏪 Furnizor materiale';
+
+        function typeFrom(t){
+            if(t.craft==="shoemaker")return"👞 Depozit materiale cizmărie";
+            if(t.shop==="leather")return"🧳 Materiale din piele";
+            if(t.shop==="fabric")return"🧵 Textile";
+            if(t.shop==="hardware")return"🔧 Feronerie";
+            if(t.shop==="craft")return"🛠️ Atelier meșteșugăresc";
+            if(t.shop==="shoes")return"👟 Încălțăminte";
+            return"🏪 Furnizor materiale";
         }
-        
-        function formatAddress(tags) {
-            const parts = [];
-            if (tags['addr:street']) parts.push(tags['addr:street']);
-            if (tags['addr:housenumber']) parts.push(tags['addr:housenumber']);
-            if (tags['addr:city']) parts.push(tags['addr:city']);
-            return parts.length > 0 ? parts.join(', ') : 'Adresă nedisponibilă';
+
+        function addressFrom(t){
+            const p=[];
+            if(t["addr:street"])p.push(t["addr:street"]);
+            if(t["addr:housenumber"])p.push(t["addr:housenumber"]);
+            if(t["addr:city"])p.push(t["addr:city"]);
+            return p.length?p.join(", "):"Adresă nedisponibilă";
         }
-        
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371;
-            const dLat = toRad(lat2 - lat1);
-            const dLon = toRad(lon2 - lon1);
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-                     Math.sin(dLon/2) * Math.sin(dLon/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c;
+
+        function distance(a,b,c,d){
+            const R=6371, dLat=rad(c-a), dLon=rad(d-b);
+            const h=Math.sin(dLat/2)**2+Math.cos(rad(a))*Math.cos(rad(c))*Math.sin(dLon/2)**2;
+            return 2*R*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));
         }
-        
-        function toRad(degrees) {
-            return degrees * Math.PI / 180;
-        }
-        
-        function displayResults(stores, center, radius) {
-            const resultsDiv = document.getElementById('results');
+        const rad=x=>x*Math.PI/180;
+
+        function displayResults(stores,center,radius){
+            const res=document.getElementById("results");
             markersLayer.clearLayers();
-            
-            if (radiusCircle) {
-                map.removeLayer(radiusCircle);
-            }
-            
-            // Adaugă cercul razei
-            radiusCircle = L.circle([center.lat, center.lon], {
-                radius: radius * 1000,
-                className: 'radius-circle'
-            }).addTo(map);
-            
-            // Adăugă marker pentru centru
-            centerMarker = L.marker([center.lat, center.lon], {
-                icon: L.divIcon({
-                    className: 'custom-marker center-marker',
-                    html: '📍',
-                    iconSize: [40, 40]
-                })
+            if(radiusCircle)map.removeLayer(radiusCircle);
+
+            radiusCircle=L.circle([center.lat,center.lon],{radius:radius*1000,className:"radius-circle"}).addTo(map);
+
+            centerMarker=L.marker([center.lat,center.lon],{
+                icon:L.divIcon({className:"custom-marker center-marker",html:"📍",iconSize:[40,40]})
             }).addTo(markersLayer);
-            centerMarker.bindPopup(`<strong>Centru căutare</strong><br>${center.display_name || 'Locație'}<br>Rază: ${radius} km`);
-            
-            if (stores.length === 0) {
-                resultsDiv.innerHTML = `<div class="no-results">Nu s-au găsit depozite în raza de ${radius} km. Încercați să măriți raza de căutare.</div>`;
+
+            if(!stores.length){
+                res.innerHTML=`<div class="no-results">Nu s-au găsit depozite.</div>`;
                 return;
             }
-            
-            let html = `<h2>Am găsit ${stores.length} depozit(e) în raza de ${radius} km:</h2>`;
-            
-            // Adăugăm markere pe hartă pentru magazine
-            stores.forEach((store, index) => {
-                const isDepozitCizmarie = store.type.includes('Depozit materiale cizmărie') || 
-                                         store.name.toLowerCase().includes('cizmărie') ||
-                                         store.name.toLowerCase().includes('cizmarie') ||
-                                         store.type.includes('cizmărie') ||
-                                         store.name.toLowerCase().includes('piele') ||
-                                         store.type.includes('piele');
 
-                // Creare marker special pentru depozite de cizmărie
-                const markerIcon = isDepozitCizmarie 
-                    ? L.divIcon({
-                        className: 'custom-marker depozit-marker',
-                        html: '🥾',
-                        iconSize: [40, 40]
-                    })
-                    : L.divIcon({
-                        className: 'custom-marker',
-                        html: '🏪',
-                        iconSize: [40, 40]
-                    });
-
-                const marker = L.marker([store.lat, store.lon], { icon: markerIcon }).addTo(markersLayer);
-                marker.bindPopup(`<strong>${store.name}</strong><br>${store.type}<br>Distanță: ${store.distance.toFixed(1)} km`);
-                
-                const cardClass = isDepozitCizmarie ? 'store-card depozit-cizmarie' : 'store-card';
-                
-                html += `
-                    <div class="${cardClass}">
-                        <div class="store-header">
-                            <div class="store-name">${index + 1}. ${store.name} ${isDepozitCizmarie ? '🥾' : ''}</div>
-                            <div class="distance">${store.distance.toFixed(1)} km</div>
-                        </div>
-                        <div class="store-info">
-                            <p><strong>Tip:</strong> ${store.type}</p>
-                            <p><strong>Adresă:</strong> ${store.address}</p>
-                            <p><strong>Telefon:</strong> ${store.phone}</p>
-                            <p><strong>Program:</strong> ${store.opening_hours}</p>
-                            ${store.website ? `<p><strong>Website:</strong> <a href="${store.website}" target="_blank">${store.website}</a></p>` : ''}
-                        </div>
+            let html=`<h2>Am găsit ${stores.length} rezultate:</h2>`;
+            for(const s of stores){
+                const special=s.type.includes("cizmărie")||s.name.toLowerCase().includes("piele");
+                const cls=special?"store-card depozit-cizmarie":"store-card";
+                html+=`
+                <div class="${cls}">
+                    <div class="store-header">
+                        <div class="store-name">${s.name}</div>
+                        <div class="distance">${s.distance.toFixed(2)} km</div>
                     </div>
-                `;
+                    <div class="store-info">
+                        <div><strong>Tip:</strong> ${s.type}</div>
+                        <div><strong>Adresă:</strong> ${s.address}</div>
+                        <div><strong>Telefon:</strong> ${s.phone}</div>
+                        <div><strong>Program:</strong> ${s.opening_hours}</div>
+                        ${s.website?`<div><a href="${s.website}" target="_blank">Website</a></div>`:""}
+                    </div>
+                </div>`;
+                L.marker([s.lat,s.lon],{
+                    icon:L.divIcon({
+                        className:special?"custom-marker depozit-marker":"custom-marker",
+                        html:special?"🥾":"📦",iconSize:[40,40]
+                    })
+                }).addTo(markersLayer).bindPopup(s.name);
+            }
+            res.innerHTML=html;
+        }
+
+        document.getElementById("radius").addEventListener("input",e=>{
+            document.getElementById("radiusValue").textContent=e.target.value;
+        });
+
+        document.getElementById("searchBtn").onclick=async()=>{
+            const loc=document.getElementById("location").value;
+            const rad=+document.getElementById("radius").value;
+            const loader=document.getElementById("loader");
+            const err=document.getElementById("error");
+            err.classList.remove("active");loader.classList.add("active");
+            try{
+                const c=await geocode(loc);
+                const stores=await findStoresAroundLocation(c,rad);
+                displayResults(stores,c,rad);
+                map.setView([c.lat,c.lon],12);
+            }catch(e){err.textContent=e.message;err.classList.add("active")}
+            loader.classList.remove("active");
+        };
+
+        document.getElementById("useLocationBtn").onclick=()=>{
+            navigator.geolocation.getCurrentPosition(async pos=>{
+                const c={lat:pos.coords.latitude,lon:pos.coords.longitude,display_name:"Locația mea"};
+                const rad=+document.getElementById("radius").value;
+                const loader=document.getElementById("loader");
+                loader.classList.add("active");
+                const stores=await findStoresAroundLocation(c,rad);
+                displayResults(stores,c,rad);
+                map.setView([c.lat,c.lon],12);
+                loader.classList.remove("active");
             });
-            
-            resultsDiv.innerHTML = html;
-            
-            // Ajustăm harta pentru a vedea toate punctele
-            if (stores.length > 0) {
-                const bounds = L.latLngBounds([
-                    [center.lat, center.lon],
-                    ...stores.map(s => [s.lat, s.lon])
-                ]);
-                map.fitBounds(bounds, { padding: [50, 50] });
-            } else {
-                map.setView([center.lat, center.lon], 12);
-            }
-        }
-        
-        function showError(message) {
-            const errorDiv = document.getElementById('error');
-            errorDiv.textContent = message;
-            errorDiv.classList.add('active');
-            setTimeout(() => errorDiv.classList.remove('active'), 5000);
-        }
-        
-        function showLoader(show) {
-            document.getElementById('loader').classList.toggle('active', show);
-        }
-        
-        document.getElementById('searchBtn').addEventListener('click', async () => {
-            const locationAddr = document.getElementById('location').value.trim();
-            const radius = parseInt(document.getElementById('radius').value);
-            
-            if (!locationAddr) {
-                showError('Vă rugăm introduceți o locație!');
-                return;
-            }
-            
-            try {
-                showLoader(true);
-                document.getElementById('results').innerHTML = '';
-                
-                const center = await geocode(locationAddr);
-                const stores = await findStoresAroundLocation(center, radius);
-                
-                displayResults(stores, center, radius);
-            } catch (error) {
-                showError('Eroare: ' + error.message);
-            } finally {
-                showLoader(false);
-            }
-        });
-        
-        document.getElementById('useLocationBtn').addEventListener('click', () => {
-            if (!navigator.geolocation) {
-                showError('Browserul dvs. nu suportă geolocalizarea');
-                return;
-            }
-            
-            navigator.geolocation.getCurrentPosition(
-                async (position) => {
-                    try {
-                        const response = await fetch(
-                            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}`
-                        );
-                        const data = await response.json();
-                        document.getElementById('location').value = data.display_name;
-                    } catch (error) {
-                        showError('Nu s-a putut determina adresa curentă');
-                    }
-                },
-                () => showError('Nu s-a putut accesa locația. Verificați permisiunile browserului.')
-            );
-        });
-        
-        document.getElementById('radius').addEventListener('input', function() {
-            document.getElementById('radiusValue').textContent = this.value;
-        });
-        
+        };
+
         initMap();
     </script>
 </body>
