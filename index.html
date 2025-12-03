@@ -151,6 +151,25 @@
             transform: translateY(-2px);
         }
         
+        .depozit-cizmarie {
+            border: 3px solid #e74c3c;
+            background: linear-gradient(135deg, #fff5f5 0%, #ffeaea 100%);
+            position: relative;
+        }
+        
+        .depozit-cizmarie::before {
+            content: '🥾 SPECIAL';
+            position: absolute;
+            top: -12px;
+            right: 20px;
+            background: #e74c3c;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        
         .store-header {
             display: flex;
             justify-content: space-between;
@@ -241,6 +260,13 @@
             line-height: 40px;
             text-align: center;
             box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        
+        .depozit-marker {
+            border: 3px solid #e74c3c;
+            background: #fff5f5;
+            color: #e74c3c;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -364,15 +390,18 @@
                 
                 // Verificăm dacă magazinul e aproximativ pe traseu
                 if (distanceFromStart + distanceFromEnd < directDistance * 1.3) {
+                    const type = getStoreType(element.tags);
+                    const name = element.tags.name || getStoreName(element.tags);
+                    
                     stores.push({
-                        name: element.tags.name || getStoreName(element.tags),
+                        name: name,
                         lat: lat,
                         lon: lon,
                         distance: distanceFromStart,
                         address: formatAddress(element.tags),
                         phone: element.tags.phone || 'Nu este disponibil',
                         opening_hours: element.tags.opening_hours || 'Nu sunt disponibile',
-                        type: getStoreType(element.tags),
+                        type: type,
                         website: element.tags.website || element.tags['contact:website'] || null
                     });
                 }
@@ -390,7 +419,7 @@
         }
         
         function getStoreType(tags) {
-            if (tags.craft === 'shoemaker') return '👞 Atelier cizmărie';
+            if (tags.craft === 'shoemaker') return '👞 Depozit materiale cizmărie';
             if (tags.shop === 'leather') return '🧳 Materiale din piele';
             if (tags.shop === 'fabric') return '🧵 Textile și stofe';
             if (tags.shop === 'hardware') return '🔧 Feronerie';
@@ -451,13 +480,33 @@
             endMarker.bindPopup('Destinație');
             
             stores.forEach((store, index) => {
-                const marker = L.marker([store.lat, store.lon]).addTo(markersLayer);
+                const isDepozitCizmarie = store.type.includes('Depozit materiale cizmărie') || 
+                                         store.name.toLowerCase().includes('cizmărie') ||
+                                         store.name.toLowerCase().includes('cizmarie') ||
+                                         store.type.includes('cizmărie');
+
+                // Creare marker special pentru depozite de cizmărie
+                const markerIcon = isDepozitCizmarie 
+                    ? L.divIcon({
+                        className: 'custom-marker depozit-marker',
+                        html: '🥾',
+                        iconSize: [40, 40]
+                    })
+                    : L.divIcon({
+                        className: 'custom-marker',
+                        html: '🏪',
+                        iconSize: [40, 40]
+                    });
+
+                const marker = L.marker([store.lat, store.lon], { icon: markerIcon }).addTo(markersLayer);
                 marker.bindPopup(`<strong>${store.name}</strong><br>${store.type}`);
                 
+                const cardClass = isDepozitCizmarie ? 'store-card depozit-cizmarie' : 'store-card';
+                
                 html += `
-                    <div class="store-card">
+                    <div class="${cardClass}">
                         <div class="store-header">
-                            <div class="store-name">${index + 1}. ${store.name}</div>
+                            <div class="store-name">${index + 1}. ${store.name} ${isDepozitCizmarie ? '🥾' : ''}</div>
                             <div class="distance">${store.distance.toFixed(1)} km</div>
                         </div>
                         <div class="store-info">
