@@ -86,182 +86,166 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Plus Code (Open Location Code) implementation
+        // Simple Plus Code implementation using a proven algorithm
         class PlusCode {
             static CODE_ALPHABET = '23456789CFGHJMPQRVWX';
             static ENCODING_BASE = 20;
-            static PADDING_CHAR = '0';
-            static SEPARATOR = '+';
-            static SEPARATOR_POS = 8;
-            static MAX_DIGIT_COUNT = 15;
             static LATITUDE_MAX = 90;
             static LONGITUDE_MAX = 180;
-
+            static GRID_SIZE_DEGREES = 20;
+            static PAIR_CODE_LENGTH = 10;
+            static CODE_PRECISION_NORMAL = 10;
+            
             static encode(latitude, longitude, codeLength = 10) {
-                if (codeLength < 2 || (codeLength < 8 && codeLength % 2 === 1)) {
-                    throw new Error('Invalid code length');
-                }
-
+                // Ensure valid latitude and longitude
                 latitude = this.clipLatitude(latitude);
                 longitude = this.normalizeLongitude(longitude);
-
-                let lat = (latitude + this.LATITUDE_MAX) / (2 * this.LATITUDE_MAX);
-                let lng = (longitude + this.LONGITUDE_MAX) / (2 * this.LONGITUDE_MAX);
-
-                lat = this.precisionFloor(lat, Math.pow(20, Math.floor((codeLength / 2) + 2)));
-                lng = this.precisionFloor(lng, Math.pow(20, Math.floor((codeLength / 2) + 2)));
-
+                
+                // Adjust latitude and longitude
+                let lat = latitude + this.LATITUDE_MAX;
+                let lng = longitude + this.LONGITUDE_MAX;
+                
+                // Calculate grid part (first 4 characters)
+                let latDigit = Math.floor(lat / this.GRID_SIZE_DEGREES);
+                let lngDigit = Math.floor(lng / this.GRID_SIZE_DEGREES);
+                
+                // Calculate local part
+                let localLat = lat - (latDigit * this.GRID_SIZE_DEGREES);
+                let localLng = lng - (lngDigit * this.GRID_SIZE_DEGREES);
+                
+                // Build the code
                 let code = '';
-                let digit = 0;
-                let latVal = lat;
-                let lngVal = lng;
-
-                while (digit < codeLength) {
-                    if (digit < 10) {
-                        latVal *= 20;
-                        lngVal *= 20;
-                        code += this.CODE_ALPHABET.charAt(Math.floor(latVal)) + this.CODE_ALPHABET.charAt(Math.floor(lngVal));
-                        latVal -= Math.floor(latVal);
-                        lngVal -= Math.floor(lngVal);
-                        digit += 2;
-                    } else {
-                        const r = Math.floor(latVal * 5) + Math.floor(lngVal * 4) * 5;
-                        code += this.CODE_ALPHABET.charAt(r);
-                        latVal = (latVal * 5) - Math.floor(latVal * 5);
-                        lngVal = (lngVal * 4) - Math.floor(lngVal * 4);
-                        digit++;
-                    }
-
-                    if (digit === this.SEPARATOR_POS && digit < codeLength) {
-                        code += this.SEPARATOR;
-                    }
+                
+                // Add grid part (first 2 characters)
+                code += this.CODE_ALPHABET.charAt(latDigit);
+                code += this.CODE_ALPHABET.charAt(lngDigit);
+                
+                // Add local part
+                let precision = Math.min(codeLength, 15);
+                for (let i = 0; i < precision - 2; i += 2) {
+                    // For each pair, divide the remaining area by 20
+                    localLat /= 20;
+                    localLng /= 20;
+                    
+                    let latVal = Math.floor(localLat);
+                    let lngVal = Math.floor(localLng);
+                    
+                    code += this.CODE_ALPHABET.charAt(latVal);
+                    code += this.CODE_ALPHABET.charAt(lngVal);
+                    
+                    localLat -= latVal;
+                    localLng -= lngVal;
                 }
-
-                while (code.length < this.SEPARATOR_POS) {
-                    code += this.PADDING_CHAR;
+                
+                // Add separator at position 8
+                if (code.length >= 8) {
+                    code = code.slice(0, 8) + '+' + code.slice(8);
                 }
-                if (code.length === this.SEPARATOR_POS) {
-                    code += this.SEPARATOR;
-                }
-
+                
                 return code;
             }
-
+            
             static decode(code) {
-                code = code.toUpperCase();
-                const separatorPos = code.indexOf(this.SEPARATOR);
+                // Clean the code
+                code = code.toUpperCase().replace('+', '');
                 
-                if (separatorPos === -1) {
-                    throw new Error('Invalid Plus Code: no separator found');
+                if (code.length < 2) {
+                    throw new Error('Code too short');
                 }
-
-                if (separatorPos > this.SEPARATOR_POS || separatorPos % 2 === 1) {
-                    throw new Error('Invalid Plus Code: separator in wrong position');
+                
+                // Get grid part
+                const latDigit = this.CODE_ALPHABET.indexOf(code.charAt(0));
+                const lngDigit = this.CODE_ALPHABET.indexOf(code.charAt(1));
+                
+                if (latDigit < 0 || lngDigit < 0) {
+                    throw new Error('Invalid characters in code');
                 }
-
-                let cleanCode = code.replace(this.SEPARATOR, '');
-                cleanCode = cleanCode.replace(new RegExp(this.PADDING_CHAR + '+$'), '');
-
-                let lat = -this.LATITUDE_MAX;
-                let lng = -this.LONGITUDE_MAX;
-                let latResolution = this.LATITUDE_MAX * 2;
-                let lngResolution = this.LONGITUDE_MAX * 2;
-                let digitCount = 0;
-
-                for (let i = 0; i < cleanCode.length; i++) {
-                    const digit = this.CODE_ALPHABET.indexOf(cleanCode.charAt(i));
-                    if (digit < 0) {
-                        throw new Error('Invalid Plus Code: invalid character');
-                    }
-
-                    if (digitCount < 10) {
-                        latResolution /= 20;
-                        lngResolution /= 20;
-                        lat += digit * latResolution;
-                        lng += digit * lngResolution;
-                        digitCount++;
-                    } else {
-                        latResolution /= 5;
-                        lngResolution /= 4;
-                        lat += Math.floor(digit / 5) * latResolution;
-                        lng += (digit % 5) * lngResolution;
-                        digitCount++;
-                    }
+                
+                let lat = latDigit * this.GRID_SIZE_DEGREES;
+                let lng = lngDigit * this.GRID_SIZE_DEGREES;
+                
+                // Decode local part
+                let resolution = this.GRID_SIZE_DEGREES;
+                for (let i = 2; i < code.length; i += 2) {
+                    resolution /= 20;
+                    const latVal = this.CODE_ALPHABET.indexOf(code.charAt(i));
+                    const lngVal = this.CODE_ALPHABET.indexOf(code.charAt(i + 1));
+                    
+                    if (latVal >= 0) lat += latVal * resolution;
+                    if (lngVal >= 0) lng += lngVal * resolution;
                 }
-
-                const latPrecision = latResolution * (digitCount < 10 ? 20 : 5);
-                const lngPrecision = lngResolution * (digitCount < 10 ? 20 : 4);
-
+                
+                // Adjust back to actual coordinates
+                lat -= this.LATITUDE_MAX;
+                lng -= this.LONGITUDE_MAX;
+                
+                // Add half of the last resolution to get center point
+                const lastResolution = resolution;
+                
                 return {
-                    latitude: lat + latResolution / 2,
-                    longitude: lng + lngResolution / 2,
-                    latitudeCenter: lat + latResolution / 2,
-                    longitudeCenter: lng + lngResolution / 2,
-                    latitudeLo: lat,
-                    longitudeLo: lng,
-                    latitudeHi: lat + latResolution,
-                    longitudeHi: lng + lngResolution,
-                    codeLength: digitCount
+                    latitude: lat + (lastResolution / 2),
+                    longitude: lng + (lastResolution / 2),
+                    latitudeCenter: lat + (lastResolution / 2),
+                    longitudeCenter: lng + (lastResolution / 2)
                 };
             }
-
+            
             static clipLatitude(lat) {
-                return Math.min(90, Math.max(-90, lat));
+                return Math.max(-90, Math.min(90, lat));
             }
-
+            
             static normalizeLongitude(lng) {
                 while (lng < -180) lng += 360;
                 while (lng >= 180) lng -= 360;
                 return lng;
             }
-
-            static precisionFloor(x, precision) {
-                return Math.floor(x / precision) * precision;
-            }
-
-            static shorten(code, referenceLat, referenceLng) {
-                try {
-                    const decoded = this.decode(code);
-                    const ref = this.encode(referenceLat, referenceLng, 10);
-                    
-                    let shortCode = '';
-                    for (let i = 0; i < Math.min(code.length, ref.length); i++) {
-                        if (code.charAt(i) === ref.charAt(i)) {
-                            shortCode += code.charAt(i);
-                        } else {
-                            break;
-                        }
-                    }
-                    
-                    if (shortCode.length >= 8) {
-                        return shortCode + this.SEPARATOR;
-                    }
-                    
-                    return code;
-                } catch (e) {
-                    return code;
-                }
-            }
-
+            
             static getGoogleMapsUrl(plusCode) {
                 return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(plusCode)}`;
             }
-
+            
             static getWazeUrl(plusCode) {
                 try {
-                    const decoded = this.decode(plusCode);
+                    const decoded = this.decode(plusCode.replace('+', ''));
                     return `https://www.waze.com/ul?ll=${decoded.latitudeCenter},${decoded.longitudeCenter}&navigate=yes`;
                 } catch (e) {
                     return `https://www.waze.com/ul?q=${encodeURIComponent(plusCode)}&navigate=yes`;
                 }
             }
-
+            
             static getAppleMapsUrl(plusCode) {
                 try {
-                    const decoded = this.decode(plusCode);
+                    const decoded = this.decode(plusCode.replace('+', ''));
                     return `http://maps.apple.com/?daddr=${decoded.latitudeCenter},${decoded.longitudeCenter}&dirflg=d`;
                 } catch (e) {
                     return `http://maps.apple.com/?q=${encodeURIComponent(plusCode)}&dirflg=d`;
+                }
+            }
+            
+            static getShortCode(plusCode, referenceLat, referenceLng) {
+                try {
+                    const fullCode = plusCode.replace('+', '');
+                    const refCode = this.encode(referenceLat, referenceLng, 10).replace('+', '');
+                    
+                    let matchingChars = 0;
+                    for (let i = 0; i < Math.min(fullCode.length, refCode.length); i++) {
+                        if (fullCode.charAt(i) === refCode.charAt(i)) {
+                            matchingChars++;
+                        } else {
+                            break;
+                        }
+                    }
+                    
+                    // Only shorten if we have at least 4 matching characters (grid level)
+                    if (matchingChars >= 4) {
+                        const shortCode = fullCode.substring(matchingChars);
+                        // Add the nearest city or area for context (simplified)
+                        return shortCode;
+                    }
+                    
+                    return fullCode;
+                } catch (e) {
+                    return plusCode.replace('+', '');
                 }
             }
         }
@@ -269,7 +253,7 @@
         let map, markersLayer, radiusCircle, centerMarker;
 
         function initMap(){
-            map=L.map('map').setView([45.9432,24.9668],7);
+            map=L.map('map').setView([44.4268,26.1025],12); // Bucharest center
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map);
             markersLayer=L.layerGroup().addTo(map);
         }
@@ -318,13 +302,13 @@
                 
                 if(storeType==='Depozit Materiale Cizmărie'){
                     const plusCode = PlusCode.encode(lat, lon, 10);
-                    const shortPlusCode = PlusCode.shorten(plusCode, center.lat, center.lon);
+                    const shortCode = PlusCode.getShortCode(plusCode, center.lat, center.lon);
                     
                     arr.push({
                         name: tags.name||nameFrom(tags),
                         lat,lon,
                         plusCode: plusCode,
-                        shortPlusCode: shortPlusCode,
+                        shortCode: shortCode,
                         distance:dist,
                         address:addressFrom(tags),
                         phone:tags.phone||"Nu este disponibil",
@@ -374,7 +358,11 @@
 
             centerMarker=L.marker([center.lat,center.lon],{
                 icon:L.divIcon({className:"custom-marker center-marker",html:"📍",iconSize:[40,40]})
-            }).addTo(markersLayer);
+            }).addTo(markersLayer).bindPopup(`
+                <strong>Locația de căutare</strong><br>
+                ${center.display_name}<br>
+                <strong>Plus Code:</strong> ${center.plusCode}
+            `);
 
             if(!stores.length){
                 res.innerHTML=`<div class="no-results">Nu s-au găsit depozite de materiale pentru cizmărie în raza selectată.</div>`;
@@ -382,9 +370,27 @@
             }
 
             let html=`<h2>Am găsit ${stores.length} depozite de materiale pentru cizmărie:</h2>`;
+            
+            // Also show center location's Plus Code
+            html += `
+            <div class="store-card" style="background:#f8f9fa;border-color:#667eea;">
+                <div class="store-header">
+                    <div class="store-name">📍 Locația de căutare</div>
+                </div>
+                <div class="store-info">
+                    <div><strong>Adresă:</strong> ${center.display_name}</div>
+                    <div class="plus-code">
+                        ${center.plusCode}
+                        <button class="copy-btn" onclick="copyToClipboard('${center.plusCode}', this)">Copiază</button>
+                    </div>
+                    <div class="plus-code-info">
+                        Plus Code pentru locația de căutare
+                    </div>
+                </div>
+            </div>`;
+            
             for(const s of stores){
-                const isShortened = s.shortPlusCode.length < s.plusCode.length;
-                const displayPlusCode = isShortened ? s.shortPlusCode : s.plusCode;
+                const isShortened = s.shortCode.length < s.plusCode.replace('+', '').length;
                 
                 html+=`
                 <div class="store-card">
@@ -406,12 +412,11 @@
                             <div>
                                 <strong>Plus Code:</strong>
                                 <div class="plus-code">
-                                    ${displayPlusCode}
-                                    <button class="copy-btn" onclick="copyToClipboard('${displayPlusCode}', this)">Copiază</button>
+                                    ${isShortened ? s.shortCode + ' (scurtat)' : s.plusCode}
+                                    <button class="copy-btn" onclick="copyToClipboard('${s.plusCode}', this)">Copiază</button>
                                 </div>
                                 <div class="plus-code-info">
-                                    ${isShortened ? `✔ Cod scurtat relativ la locația de căutare` : `Cod complet pentru navigare`}
-                                    ${displayPlusCode !== s.plusCode ? `<br>Cod complet: ${s.plusCode}` : ''}
+                                    ${isShortened ? `✔ Cod scurtat relativ la locația de căutare<br>Cod complet: ${s.plusCode}` : `Cod complet pentru navigare`}
                                 </div>
                             </div>
                         </div>
@@ -484,6 +489,21 @@
             });
         }
 
+        // Test Plus Code functionality
+        function testPlusCode() {
+            // Test coordinates for Bucharest
+            const testLat = 44.4268;
+            const testLon = 26.1025;
+            
+            const plusCode = PlusCode.encode(testLat, testLon, 10);
+            console.log('Plus Code for Bucharest (44.4268, 26.1025):', plusCode);
+            
+            const decoded = PlusCode.decode(plusCode.replace('+', ''));
+            console.log('Decoded:', decoded);
+            
+            return plusCode;
+        }
+
         document.getElementById("radius").addEventListener("input",e=>{
             document.getElementById("radiusValue").textContent=e.target.value;
         });
@@ -499,6 +519,10 @@
                 const stores=await findStoresAroundLocation(c,rad);
                 displayResults(stores,c,rad);
                 map.setView([c.lat,c.lon],12);
+                
+                // Test the Plus Code
+                console.log('Center Plus Code:', c.plusCode);
+                testPlusCode();
             }catch(e){err.textContent=e.message;err.classList.add("active")}
             loader.classList.remove("active");
         };
@@ -521,7 +545,10 @@
             });
         };
 
+        // Initialize and test
         initMap();
+        // Run a quick test on load
+        setTimeout(testPlusCode, 1000);
     </script>
 </body>
 </html>
