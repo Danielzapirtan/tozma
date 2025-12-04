@@ -27,8 +27,6 @@
         .results{padding:30px}.results h2{color:#2c3e50;margin-bottom:20px;font-size:1.5em}
         .store-card{background:#fff;border:2px solid #e0e0e0;border-radius:15px;padding:20px;margin-bottom:20px;transition:.3s}
         .store-card:hover{border-color:#667eea;box-shadow:0 5px 15px rgba(102,126,234,.2);transform:translateY(-2px)}
-        .depozit-cizmarie{border:3px solid #e74c3c;background:linear-gradient(135deg,#fff5f5,#ffeaea);position:relative}
-        .depozit-cizmarie:before{content:"🥾 SPECIAL";position:absolute;top:-12px;right:20px;background:#e74c3c;color:#fff;padding:3px 10px;border-radius:15px;font-size:.8em;font-weight:700}
         .store-header{display:flex;justify-content:space-between;align-items:start;margin-bottom:15px}
         .store-name{font-size:1.3em;font-weight:700;color:#2c3e50}.distance{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:5px 15px;border-radius:20px;font-weight:600;font-size:.9em}
         .store-info{color:#555;line-height:1.8}.store-info strong{color:#2c3e50}
@@ -86,21 +84,16 @@
         async function findStoresAroundLocation(center,radiusKm){
             const deg=radiusKm/111.32;
             const bbox=[center.lat-deg,center.lon-deg,center.lat+deg,center.lon+deg].join(',');
+            // Focused query for shoemaker/cobbler businesses only
             const query=`
                 [out:json][timeout:25];
                 (
-                  node["shop"="leather"](${bbox});
-                  node["shop"="fabric"](${bbox});
-                  node["shop"="hardware"](${bbox});
                   node["craft"="shoemaker"](${bbox});
-                  node["shop"="craft"](${bbox});
-                  node["shop"="shoes"](${bbox});
-                  way["shop"="leather"](${bbox});
-                  way["shop"="fabric"](${bbox});
-                  way["shop"="hardware"](${bbox});
+                  node["craft"="cobbler"](${bbox});
                   way["craft"="shoemaker"](${bbox});
-                  way["shop"="craft"](${bbox});
-                  way["shop"="shoes"](${bbox});
+                  way["craft"="cobbler"](${bbox});
+                  node["shop"="leather"](${bbox});
+                  way["shop"="leather"](${bbox});
                 );
                 out center;`;
             const r=await fetch("https://overpass-api.de/api/interpreter",{method:"POST",body:query});
@@ -117,38 +110,37 @@
                 const dist=distance(center.lat,center.lon,lat,lon);
                 if(dist>radiusKm)continue;
                 const tags=e.tags||{};
-                arr.push({
-                    name: tags.name||nameFrom(tags),
-                    lat,lon,
-                    distance:dist,
-                    address:addressFrom(tags),
-                    phone:tags.phone||"Nu este disponibil",
-                    opening_hours:tags.opening_hours||"Nu sunt disponibile",
-                    type:typeFrom(tags),
-                    website:tags.website||tags["contact:website"]||null
-                });
+                const storeType=typeFrom(tags);
+                
+                // Only include stores of type 'Depozit Materiale Cizmărie'
+                if(storeType==='Depozit Materiale Cizmărie'){
+                    arr.push({
+                        name: tags.name||nameFrom(tags),
+                        lat,lon,
+                        distance:dist,
+                        address:addressFrom(tags),
+                        phone:tags.phone||"Nu este disponibil",
+                        opening_hours:tags.opening_hours||"Nu sunt disponibile",
+                        type:storeType,
+                        website:tags.website||tags["contact:website"]||null
+                    });
+                }
             }
             return arr.sort((a,b)=>a.distance-b.distance);
         }
 
         function nameFrom(t){
-            if(t.craft==="shoemaker")return"Atelier Cizmărie";
-            if(t.shop==="leather")return"Magazin Materiale Piele";
-            if(t.shop==="fabric")return"Magazin Textile";
-            if(t.shop==="hardware")return"Magazin Feronerie";
-            if(t.shop==="craft")return"Atelier Meșteșugăresc";
-            if(t.shop==="shoes")return"Magazin Încălțăminte";
-            return"Furnizor Materiale";
+            if(t.craft==="shoemaker"||t.craft==="cobbler")return"Atelier Cizmărie";
+            if(t.shop==="leather")return"Depozit Materiale Piele pentru Cizmărie";
+            return"Furnizor Materiale Cizmărie";
         }
 
         function typeFrom(t){
-            if(t.craft==="shoemaker")return"👞 Depozit materiale cizmărie";
-            if(t.shop==="leather")return"🧳 Materiale din piele";
-            if(t.shop==="fabric")return"🧵 Textile";
-            if(t.shop==="hardware")return"🔧 Feronerie";
-            if(t.shop==="craft")return"🛠️ Atelier meșteșugăresc";
-            if(t.shop==="shoes")return"👟 Încălțăminte";
-            return"🏪 Furnizor materiale";
+            // Only return the specific type we want
+            if(t.craft==="shoemaker"||t.craft==="cobbler"||t.shop==="leather"){
+                return"Depozit Materiale Cizmărie";
+            }
+            return""; // Empty string for other types
         }
 
         function addressFrom(t){
@@ -178,16 +170,14 @@
             }).addTo(markersLayer);
 
             if(!stores.length){
-                res.innerHTML=`<div class="no-results">Nu s-au găsit depozite.</div>`;
+                res.innerHTML=`<div class="no-results">Nu s-au găsit depozite de materiale pentru cizmărie în raza selectată.</div>`;
                 return;
             }
 
-            let html=`<h2>Am găsit ${stores.length} rezultate:</h2>`;
+            let html=`<h2>Am găsit ${stores.length} depozite de materiale pentru cizmărie:</h2>`;
             for(const s of stores){
-                const special=s.type.includes("cizmărie")||s.name.toLowerCase().includes("piele");
-                const cls=special?"store-card depozit-cizmarie":"store-card";
                 html+=`
-                <div class="${cls}">
+                <div class="store-card">
                     <div class="store-header">
                         <div class="store-name">${s.name}</div>
                         <div class="distance">${s.distance.toFixed(2)} km</div>
@@ -202,8 +192,8 @@
                 </div>`;
                 L.marker([s.lat,s.lon],{
                     icon:L.divIcon({
-                        className:special?"custom-marker depozit-marker":"custom-marker",
-                        html:special?"🥾":"📦",iconSize:[40,40]
+                        className:"custom-marker depozit-marker",
+                        html:"🥾",iconSize:[40,40]
                     })
                 }).addTo(markersLayer).bindPopup(s.name);
             }
