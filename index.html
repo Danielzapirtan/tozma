@@ -31,6 +31,8 @@
         .store-name{font-size:1.3em;font-weight:700;color:#2c3e50}.distance{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:5px 15px;border-radius:20px;font-weight:600;font-size:.9em}
         .store-info{color:#555;line-height:1.8}.store-info strong{color:#2c3e50}
         .coordinates{font-family:monospace;color:#666;font-size:0.9em;margin-top:8px;padding:6px 10px;background:#f8f9fa;border-radius:6px;display:inline-block}
+        .plus-code{font-family:monospace;color:#e74c3c;font-size:1em;font-weight:600;letter-spacing:1px;margin-top:8px;padding:6px 10px;background:#fff5f5;border-radius:6px;display:inline-block;border:1px solid #ffcccc}
+        .plus-code-info{font-size:0.85em;color:#7f8c8d;margin-top:5px}
         .navigation-links{margin-top:15px;padding-top:15px;border-top:1px dashed #ddd}
         .nav-instructions{color:#666;font-size:0.9em;margin-bottom:10px}
         .nav-buttons{display:flex;gap:10px;flex-wrap:wrap}
@@ -42,6 +44,11 @@
         .nav-btn-apple:hover{background:#333}
         .nav-btn-waze{background:#33ccff}
         .nav-btn-waze:hover{background:#1ab2ff}
+        .plus-code-btn{background:#27ae60}
+        .plus-code-btn:hover{background:#219653}
+        .copy-btn{background:#9b59b6;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:0.85em;margin-left:8px;transition:background 0.3s}
+        .copy-btn:hover{background:#8e44ad}
+        .copy-btn:active{transform:scale(0.95)}
         .loader{text-align:center;padding:40px;display:none}.loader.active{display:block}
         .spinner{border:4px solid #f3f3f3;border-top:4px solid #667eea;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;margin:0 auto 20px}
         @keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
@@ -52,6 +59,7 @@
         .depozit-marker{border:3px solid #e74c3c;background:#fff5f5;color:#e74c3c;font-weight:700}
         .center-marker{border:3px solid #2c3e50;background:#34495e;color:#fff;font-weight:700}
         .radius-circle{stroke:#667eea;stroke-width:2;stroke-dasharray:5,5;fill:rgba(102,126,234,.1);fill-opacity:.3}
+        .coordinates-container{margin-top:10px;display:flex;flex-direction:column;gap:8px}
     </style>
 </head>
 <body>
@@ -78,6 +86,186 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+        // Plus Code (Open Location Code) implementation
+        class PlusCode {
+            static CODE_ALPHABET = '23456789CFGHJMPQRVWX';
+            static ENCODING_BASE = 20;
+            static PADDING_CHAR = '0';
+            static SEPARATOR = '+';
+            static SEPARATOR_POS = 8;
+            static MAX_DIGIT_COUNT = 15;
+            static LATITUDE_MAX = 90;
+            static LONGITUDE_MAX = 180;
+
+            static encode(latitude, longitude, codeLength = 10) {
+                if (codeLength < 2 || (codeLength < 8 && codeLength % 2 === 1)) {
+                    throw new Error('Invalid code length');
+                }
+
+                latitude = this.clipLatitude(latitude);
+                longitude = this.normalizeLongitude(longitude);
+
+                let lat = (latitude + this.LATITUDE_MAX) / (2 * this.LATITUDE_MAX);
+                let lng = (longitude + this.LONGITUDE_MAX) / (2 * this.LONGITUDE_MAX);
+
+                lat = this.precisionFloor(lat, Math.pow(20, Math.floor((codeLength / 2) + 2)));
+                lng = this.precisionFloor(lng, Math.pow(20, Math.floor((codeLength / 2) + 2)));
+
+                let code = '';
+                let digit = 0;
+                let latVal = lat;
+                let lngVal = lng;
+
+                while (digit < codeLength) {
+                    if (digit < 10) {
+                        latVal *= 20;
+                        lngVal *= 20;
+                        code += this.CODE_ALPHABET.charAt(Math.floor(latVal)) + this.CODE_ALPHABET.charAt(Math.floor(lngVal));
+                        latVal -= Math.floor(latVal);
+                        lngVal -= Math.floor(lngVal);
+                        digit += 2;
+                    } else {
+                        const r = Math.floor(latVal * 5) + Math.floor(lngVal * 4) * 5;
+                        code += this.CODE_ALPHABET.charAt(r);
+                        latVal = (latVal * 5) - Math.floor(latVal * 5);
+                        lngVal = (lngVal * 4) - Math.floor(lngVal * 4);
+                        digit++;
+                    }
+
+                    if (digit === this.SEPARATOR_POS && digit < codeLength) {
+                        code += this.SEPARATOR;
+                    }
+                }
+
+                while (code.length < this.SEPARATOR_POS) {
+                    code += this.PADDING_CHAR;
+                }
+                if (code.length === this.SEPARATOR_POS) {
+                    code += this.SEPARATOR;
+                }
+
+                return code;
+            }
+
+            static decode(code) {
+                code = code.toUpperCase();
+                const separatorPos = code.indexOf(this.SEPARATOR);
+                
+                if (separatorPos === -1) {
+                    throw new Error('Invalid Plus Code: no separator found');
+                }
+
+                if (separatorPos > this.SEPARATOR_POS || separatorPos % 2 === 1) {
+                    throw new Error('Invalid Plus Code: separator in wrong position');
+                }
+
+                let cleanCode = code.replace(this.SEPARATOR, '');
+                cleanCode = cleanCode.replace(new RegExp(this.PADDING_CHAR + '+$'), '');
+
+                let lat = -this.LATITUDE_MAX;
+                let lng = -this.LONGITUDE_MAX;
+                let latResolution = this.LATITUDE_MAX * 2;
+                let lngResolution = this.LONGITUDE_MAX * 2;
+                let digitCount = 0;
+
+                for (let i = 0; i < cleanCode.length; i++) {
+                    const digit = this.CODE_ALPHABET.indexOf(cleanCode.charAt(i));
+                    if (digit < 0) {
+                        throw new Error('Invalid Plus Code: invalid character');
+                    }
+
+                    if (digitCount < 10) {
+                        latResolution /= 20;
+                        lngResolution /= 20;
+                        lat += digit * latResolution;
+                        lng += digit * lngResolution;
+                        digitCount++;
+                    } else {
+                        latResolution /= 5;
+                        lngResolution /= 4;
+                        lat += Math.floor(digit / 5) * latResolution;
+                        lng += (digit % 5) * lngResolution;
+                        digitCount++;
+                    }
+                }
+
+                const latPrecision = latResolution * (digitCount < 10 ? 20 : 5);
+                const lngPrecision = lngResolution * (digitCount < 10 ? 20 : 4);
+
+                return {
+                    latitude: lat + latResolution / 2,
+                    longitude: lng + lngResolution / 2,
+                    latitudeCenter: lat + latResolution / 2,
+                    longitudeCenter: lng + lngResolution / 2,
+                    latitudeLo: lat,
+                    longitudeLo: lng,
+                    latitudeHi: lat + latResolution,
+                    longitudeHi: lng + lngResolution,
+                    codeLength: digitCount
+                };
+            }
+
+            static clipLatitude(lat) {
+                return Math.min(90, Math.max(-90, lat));
+            }
+
+            static normalizeLongitude(lng) {
+                while (lng < -180) lng += 360;
+                while (lng >= 180) lng -= 360;
+                return lng;
+            }
+
+            static precisionFloor(x, precision) {
+                return Math.floor(x / precision) * precision;
+            }
+
+            static shorten(code, referenceLat, referenceLng) {
+                try {
+                    const decoded = this.decode(code);
+                    const ref = this.encode(referenceLat, referenceLng, 10);
+                    
+                    let shortCode = '';
+                    for (let i = 0; i < Math.min(code.length, ref.length); i++) {
+                        if (code.charAt(i) === ref.charAt(i)) {
+                            shortCode += code.charAt(i);
+                        } else {
+                            break;
+                        }
+                    }
+                    
+                    if (shortCode.length >= 8) {
+                        return shortCode + this.SEPARATOR;
+                    }
+                    
+                    return code;
+                } catch (e) {
+                    return code;
+                }
+            }
+
+            static getGoogleMapsUrl(plusCode) {
+                return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(plusCode)}`;
+            }
+
+            static getWazeUrl(plusCode) {
+                try {
+                    const decoded = this.decode(plusCode);
+                    return `https://www.waze.com/ul?ll=${decoded.latitudeCenter},${decoded.longitudeCenter}&navigate=yes`;
+                } catch (e) {
+                    return `https://www.waze.com/ul?q=${encodeURIComponent(plusCode)}&navigate=yes`;
+                }
+            }
+
+            static getAppleMapsUrl(plusCode) {
+                try {
+                    const decoded = this.decode(plusCode);
+                    return `http://maps.apple.com/?daddr=${decoded.latitudeCenter},${decoded.longitudeCenter}&dirflg=d`;
+                } catch (e) {
+                    return `http://maps.apple.com/?q=${encodeURIComponent(plusCode)}&dirflg=d`;
+                }
+            }
+        }
+
         let map, markersLayer, radiusCircle, centerMarker;
 
         function initMap(){
@@ -90,13 +278,17 @@
             const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=ro&limit=1`);
             const d=await r.json();
             if(d.length===0)throw new Error("Locația nu a fost găsită");
-            return {lat:+d[0].lat,lon:+d[0].lon,display_name:d[0].display_name};
+            return {
+                lat:+d[0].lat,
+                lon:+d[0].lon,
+                display_name:d[0].display_name,
+                plusCode: PlusCode.encode(+d[0].lat, +d[0].lon, 10)
+            };
         }
 
         async function findStoresAroundLocation(center,radiusKm){
             const deg=radiusKm/111.32;
             const bbox=[center.lat-deg,center.lon-deg,center.lat+deg,center.lon+deg].join(',');
-            // Focused query for shoemaker/cobbler businesses only
             const query=`
                 [out:json][timeout:25];
                 (
@@ -124,11 +316,15 @@
                 const tags=e.tags||{};
                 const storeType=typeFrom(tags);
                 
-                // Only include stores of type 'Depozit Materiale Cizmărie'
                 if(storeType==='Depozit Materiale Cizmărie'){
+                    const plusCode = PlusCode.encode(lat, lon, 10);
+                    const shortPlusCode = PlusCode.shorten(plusCode, center.lat, center.lon);
+                    
                     arr.push({
                         name: tags.name||nameFrom(tags),
                         lat,lon,
+                        plusCode: plusCode,
+                        shortPlusCode: shortPlusCode,
                         distance:dist,
                         address:addressFrom(tags),
                         phone:tags.phone||"Nu este disponibil",
@@ -148,11 +344,10 @@
         }
 
         function typeFrom(t){
-            // Only return the specific type we want
             if(t.craft==="shoemaker"||t.craft==="cobbler"||t.shop==="leather"){
                 return"Depozit Materiale Cizmărie";
             }
-            return""; // Empty string for other types
+            return"";
         }
 
         function addressFrom(t){
@@ -188,6 +383,9 @@
 
             let html=`<h2>Am găsit ${stores.length} depozite de materiale pentru cizmărie:</h2>`;
             for(const s of stores){
+                const isShortened = s.shortPlusCode.length < s.plusCode.length;
+                const displayPlusCode = isShortened ? s.shortPlusCode : s.plusCode;
+                
                 html+=`
                 <div class="store-card">
                     <div class="store-header">
@@ -199,27 +397,49 @@
                         <div><strong>Adresă:</strong> ${s.address}</div>
                         <div><strong>Telefon:</strong> ${s.phone}</div>
                         <div><strong>Program:</strong> ${s.opening_hours}</div>
-                        <div class="coordinates"><strong>Coordonate:</strong> ${s.lat.toFixed(6)}, ${s.lon.toFixed(6)}</div>
+                        
+                        <div class="coordinates-container">
+                            <div>
+                                <strong>Coordonate tradiționale:</strong>
+                                <div class="coordinates">${s.lat.toFixed(6)}, ${s.lon.toFixed(6)}</div>
+                            </div>
+                            <div>
+                                <strong>Plus Code:</strong>
+                                <div class="plus-code">
+                                    ${displayPlusCode}
+                                    <button class="copy-btn" onclick="copyToClipboard('${displayPlusCode}', this)">Copiază</button>
+                                </div>
+                                <div class="plus-code-info">
+                                    ${isShortened ? `✔ Cod scurtat relativ la locația de căutare` : `Cod complet pentru navigare`}
+                                    ${displayPlusCode !== s.plusCode ? `<br>Cod complet: ${s.plusCode}` : ''}
+                                </div>
+                            </div>
+                        </div>
                         
                         <div class="navigation-links">
                             <div class="nav-instructions">
                                 <strong>Navigare:</strong> Apasă butonul pentru navigare cu indicații vocale.
                             </div>
                             <div class="nav-buttons">
-                                <a href="https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}&travelmode=driving" 
+                                <a href="${PlusCode.getGoogleMapsUrl(s.plusCode)}" 
                                    target="_blank"
                                    class="nav-btn nav-btn-google">
                                     🚗 Google Maps
                                 </a>
-                                <a href="http://maps.apple.com/?daddr=${s.lat},${s.lon}&dirflg=d" 
+                                <a href="${PlusCode.getAppleMapsUrl(s.plusCode)}" 
                                    target="_blank"
                                    class="nav-btn nav-btn-apple">
                                     🍏 Apple Maps
                                 </a>
-                                <a href="https://www.waze.com/ul?ll=${s.lat},${s.lon}&navigate=yes" 
+                                <a href="${PlusCode.getWazeUrl(s.plusCode)}" 
                                    target="_blank"
                                    class="nav-btn nav-btn-waze">
                                     🚦 Waze
+                                </a>
+                                <a href="https://plus.codes/${s.plusCode.replace('+', '%2B')}" 
+                                   target="_blank"
+                                   class="nav-btn plus-code-btn">
+                                    🔗 Plus Code
                                 </a>
                             </div>
                         </div>
@@ -235,11 +455,33 @@
                 }).addTo(markersLayer).bindPopup(`
                     <strong>${s.name}</strong><br>
                     ${s.address}<br>
+                    <strong>Plus Code:</strong> ${s.plusCode}<br>
                     <em>${s.distance.toFixed(2)} km distanță</em><br>
-                    <a href="https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}&travelmode=driving" target="_blank">🚗 Navighează</a>
+                    <a href="${PlusCode.getGoogleMapsUrl(s.plusCode)}" target="_blank">🚗 Navighează</a>
                 `);
             }
             res.innerHTML=html;
+        }
+
+        // Clipboard function
+        function copyToClipboard(text, button) {
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = button.textContent;
+                button.textContent = '✓ Copiat!';
+                button.style.background = '#27ae60';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = '';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                button.textContent = 'Eroare';
+                button.style.background = '#e74c3c';
+                setTimeout(() => {
+                    button.textContent = 'Copiază';
+                    button.style.background = '';
+                }, 2000);
+            });
         }
 
         document.getElementById("radius").addEventListener("input",e=>{
@@ -263,7 +505,12 @@
 
         document.getElementById("useLocationBtn").onclick=()=>{
             navigator.geolocation.getCurrentPosition(async pos=>{
-                const c={lat:pos.coords.latitude,lon:pos.coords.longitude,display_name:"Locația mea"};
+                const c={
+                    lat:pos.coords.latitude,
+                    lon:pos.coords.longitude,
+                    display_name:"Locația mea",
+                    plusCode: PlusCode.encode(pos.coords.latitude, pos.coords.longitude, 10)
+                };
                 const rad=+document.getElementById("radius").value;
                 const loader=document.getElementById("loader");
                 loader.classList.add("active");
