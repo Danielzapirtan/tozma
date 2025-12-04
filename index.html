@@ -86,118 +86,66 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Simple Plus Code implementation using a proven algorithm
         class PlusCode {
             static CODE_ALPHABET = '23456789CFGHJMPQRVWX';
-            static ENCODING_BASE = 20;
-            static LATITUDE_MAX = 90;
-            static LONGITUDE_MAX = 180;
-            static GRID_SIZE_DEGREES = 20;
-            static PAIR_CODE_LENGTH = 10;
-            static CODE_PRECISION_NORMAL = 10;
+            static PAIR_PRECISION = [20.0, 1.0, 0.05, 0.0025, 0.000125];
             
-            static encode(latitude, longitude, codeLength = 10) {
-                // Ensure valid latitude and longitude
-                latitude = this.clipLatitude(latitude);
-                longitude = this.normalizeLongitude(longitude);
+            static encode(lat, lon, codeLength = 10) {
+                lat = Math.max(-90, Math.min(90, lat));
+                lon = ((lon + 180) % 360) - 180;
                 
-                // Adjust latitude and longitude
-                let lat = latitude + this.LATITUDE_MAX;
-                let lng = longitude + this.LONGITUDE_MAX;
+                lat = lat + 90;
+                lon = lon + 180;
                 
-                // Calculate grid part (first 4 characters)
-                let latDigit = Math.floor(lat / this.GRID_SIZE_DEGREES);
-                let lngDigit = Math.floor(lng / this.GRID_SIZE_DEGREES);
-                
-                // Calculate local part
-                let localLat = lat - (latDigit * this.GRID_SIZE_DEGREES);
-                let localLng = lng - (lngDigit * this.GRID_SIZE_DEGREES);
-                
-                // Build the code
                 let code = '';
+                let latVal = lat;
+                let lonVal = lon;
                 
-                // Add grid part (first 2 characters)
-                code += this.CODE_ALPHABET.charAt(latDigit);
-                code += this.CODE_ALPHABET.charAt(lngDigit);
-                
-                // Add local part
-                let precision = Math.min(codeLength, 15);
-                for (let i = 0; i < precision - 2; i += 2) {
-                    // For each pair, divide the remaining area by 20
-                    localLat /= 20;
-                    localLng /= 20;
+                for (let i = 0; i < 5; i++) {
+                    const precision = this.PAIR_PRECISION[i];
+                    const latDigit = Math.floor(latVal / precision) % 20;
+                    const lonDigit = Math.floor(lonVal / precision) % 20;
                     
-                    let latVal = Math.floor(localLat);
-                    let lngVal = Math.floor(localLng);
+                    code += this.CODE_ALPHABET[latDigit];
+                    code += this.CODE_ALPHABET[lonDigit];
                     
-                    code += this.CODE_ALPHABET.charAt(latVal);
-                    code += this.CODE_ALPHABET.charAt(lngVal);
-                    
-                    localLat -= latVal;
-                    localLng -= lngVal;
+                    if (i === 3) {
+                        code += '+';
+                    }
                 }
                 
-                // Add separator at position 8
-                if (code.length >= 8) {
-                    code = code.slice(0, 8) + '+' + code.slice(8);
-                }
-                
-                return code;
+                return code.substring(0, codeLength + 1);
             }
             
             static decode(code) {
-                // Clean the code
                 code = code.toUpperCase().replace('+', '');
                 
-                if (code.length < 2) {
-                    throw new Error('Code too short');
-                }
+                let lat = 0;
+                let lon = 0;
                 
-                // Get grid part
-                const latDigit = this.CODE_ALPHABET.indexOf(code.charAt(0));
-                const lngDigit = this.CODE_ALPHABET.indexOf(code.charAt(1));
-                
-                if (latDigit < 0 || lngDigit < 0) {
-                    throw new Error('Invalid characters in code');
-                }
-                
-                let lat = latDigit * this.GRID_SIZE_DEGREES;
-                let lng = lngDigit * this.GRID_SIZE_DEGREES;
-                
-                // Decode local part
-                let resolution = this.GRID_SIZE_DEGREES;
-                for (let i = 2; i < code.length; i += 2) {
-                    resolution /= 20;
-                    const latVal = this.CODE_ALPHABET.indexOf(code.charAt(i));
-                    const lngVal = this.CODE_ALPHABET.indexOf(code.charAt(i + 1));
+                for (let i = 0; i < Math.min(code.length / 2, 5); i++) {
+                    const latChar = code[i * 2];
+                    const lonChar = code[i * 2 + 1];
                     
-                    if (latVal >= 0) lat += latVal * resolution;
-                    if (lngVal >= 0) lng += lngVal * resolution;
+                    const latDigit = this.CODE_ALPHABET.indexOf(latChar);
+                    const lonDigit = this.CODE_ALPHABET.indexOf(lonChar);
+                    
+                    if (latDigit >= 0 && lonDigit >= 0) {
+                        lat += latDigit * this.PAIR_PRECISION[i];
+                        lon += lonDigit * this.PAIR_PRECISION[i];
+                    }
                 }
                 
-                // Adjust back to actual coordinates
-                lat -= this.LATITUDE_MAX;
-                lng -= this.LONGITUDE_MAX;
-                
-                // Add half of the last resolution to get center point
-                const lastResolution = resolution;
+                const precision = this.PAIR_PRECISION[Math.min(Math.floor(code.length / 2) - 1, 4)];
+                lat = lat - 90 + precision / 2;
+                lon = lon - 180 + precision / 2;
                 
                 return {
-                    latitude: lat + (lastResolution / 2),
-                    longitude: lng + (lastResolution / 2),
-                    latitudeCenter: lat + (lastResolution / 2),
-                    longitudeCenter: lng + (lastResolution / 2)
+                    latitude: lat,
+                    longitude: lon,
+                    latitudeCenter: lat,
+                    longitudeCenter: lon
                 };
-            }
-            
-            static clipLatitude(lat) {
-                return Math.max(-90, Math.min(90, lat));
-            }
-            
-            static normalizeLongitude(lng) {
-                while (lng < -180) lng += 360;
-                while (lng >= 180) lng -= 360;
-                return lng;
             }
             
             static getGoogleMapsUrl(plusCode) {
@@ -223,37 +171,30 @@
             }
             
             static getShortCode(plusCode, referenceLat, referenceLng) {
-                try {
-                    const fullCode = plusCode.replace('+', '');
-                    const refCode = this.encode(referenceLat, referenceLng, 10).replace('+', '');
-                    
-                    let matchingChars = 0;
-                    for (let i = 0; i < Math.min(fullCode.length, refCode.length); i++) {
-                        if (fullCode.charAt(i) === refCode.charAt(i)) {
-                            matchingChars++;
-                        } else {
-                            break;
-                        }
+                const fullCode = plusCode.replace('+', '');
+                const refCode = this.encode(referenceLat, referenceLng, 10).replace('+', '');
+                
+                let matchingChars = 0;
+                for (let i = 0; i < 4; i++) {
+                    if (fullCode[i] === refCode[i]) {
+                        matchingChars++;
+                    } else {
+                        break;
                     }
-                    
-                    // Only shorten if we have at least 4 matching characters (grid level)
-                    if (matchingChars >= 4) {
-                        const shortCode = fullCode.substring(matchingChars);
-                        // Add the nearest city or area for context (simplified)
-                        return shortCode;
-                    }
-                    
-                    return fullCode;
-                } catch (e) {
-                    return plusCode.replace('+', '');
                 }
+                
+                if (matchingChars >= 4) {
+                    return fullCode.substring(4, 8) + '+' + fullCode.substring(8);
+                }
+                
+                return plusCode;
             }
         }
 
         let map, markersLayer, radiusCircle, centerMarker;
 
         function initMap(){
-            map=L.map('map').setView([44.4268,26.1025],12); // Bucharest center
+            map=L.map('map').setView([44.4268,26.1025],12);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map);
             markersLayer=L.layerGroup().addTo(map);
         }
@@ -276,14 +217,24 @@
             const query=`
                 [out:json][timeout:25];
                 (
-                  node["craft"="shoemaker"](${bbox});
-                  node["craft"="cobbler"](${bbox});
-                  way["craft"="shoemaker"](${bbox});
-                  way["craft"="cobbler"](${bbox});
                   node["shop"="leather"](${bbox});
                   way["shop"="leather"](${bbox});
+                  node["craft"="shoemaker"](${bbox});
+                  way["craft"="shoemaker"](${bbox});
+                  node["craft"="cobbler"](${bbox});
+                  way["craft"="cobbler"](${bbox});
+                  node["shop"="shoes"]["service:repair"="yes"](${bbox});
+                  way["shop"="shoes"]["service:repair"="yes"](${bbox});
+                  node["amenity"="workshop"]["workshop"="shoemaker"](${bbox});
+                  way["amenity"="workshop"]["workshop"="shoemaker"](${bbox});
+                  node[~"name"~"cizm",i](${bbox});
+                  way[~"name"~"cizm",i](${bbox});
+                  node[~"name"~"leather",i](${bbox});
+                  way[~"name"~"leather",i](${bbox});
                 );
-                out center;`;
+                out body;
+                >;
+                out skel qt;`;
             const r=await fetch("https://overpass-api.de/api/interpreter",{method:"POST",body:query});
             const d=await r.json();
             return processStores(d.elements,center,radiusKm);
@@ -291,47 +242,51 @@
 
         function processStores(els,center,radiusKm){
             const arr=[];
+            const seen = new Set();
+            
             for(const e of els){
                 const lat=e.lat||(e.center&&e.center.lat);
                 const lon=e.lon||(e.center&&e.center.lon);
                 if(!lat||!lon)continue;
+                
+                const key = `${lat.toFixed(6)},${lon.toFixed(6)}`;
+                if(seen.has(key))continue;
+                seen.add(key);
+                
                 const dist=distance(center.lat,center.lon,lat,lon);
                 if(dist>radiusKm)continue;
                 const tags=e.tags||{};
-                const storeType=typeFrom(tags);
                 
-                if(storeType==='Depozit Materiale Cizmărie'){
-                    const plusCode = PlusCode.encode(lat, lon, 10);
-                    const shortCode = PlusCode.getShortCode(plusCode, center.lat, center.lon);
-                    
-                    arr.push({
-                        name: tags.name||nameFrom(tags),
-                        lat,lon,
-                        plusCode: plusCode,
-                        shortCode: shortCode,
-                        distance:dist,
-                        address:addressFrom(tags),
-                        phone:tags.phone||"Nu este disponibil",
-                        opening_hours:tags.opening_hours||"Nu sunt disponibile",
-                        type:storeType,
-                        website:tags.website||tags["contact:website"]||null
-                    });
-                }
+                const plusCode = PlusCode.encode(lat, lon, 10);
+                const shortCode = PlusCode.getShortCode(plusCode, center.lat, center.lon);
+                
+                arr.push({
+                    name: tags.name||nameFrom(tags),
+                    lat,lon,
+                    plusCode: plusCode,
+                    shortCode: shortCode,
+                    distance:dist,
+                    address:addressFrom(tags),
+                    phone:tags.phone||tags["contact:phone"]||"Nu este disponibil",
+                    opening_hours:tags.opening_hours||"Nu sunt disponibile",
+                    type:typeFrom(tags),
+                    website:tags.website||tags["contact:website"]||null
+                });
             }
             return arr.sort((a,b)=>a.distance-b.distance);
         }
 
         function nameFrom(t){
+            if(t.name)return t.name;
             if(t.craft==="shoemaker"||t.craft==="cobbler")return"Atelier Cizmărie";
-            if(t.shop==="leather")return"Depozit Materiale Piele pentru Cizmărie";
-            return"Furnizor Materiale Cizmărie";
+            if(t.shop==="leather")return"Magazin Materiale Piele";
+            return"Depozit Materiale Cizmărie";
         }
 
         function typeFrom(t){
-            if(t.craft==="shoemaker"||t.craft==="cobbler"||t.shop==="leather"){
-                return"Depozit Materiale Cizmărie";
-            }
-            return"";
+            if(t.shop==="leather")return"Magazin Materiale Piele";
+            if(t.craft==="shoemaker"||t.craft==="cobbler")return"Atelier Cizmărie";
+            return"Depozit Materiale Cizmărie";
         }
 
         function addressFrom(t){
@@ -365,13 +320,12 @@
             `);
 
             if(!stores.length){
-                res.innerHTML=`<div class="no-results">Nu s-au găsit depozite de materiale pentru cizmărie în raza selectată.</div>`;
+                res.innerHTML=`<div class="no-results">Nu s-au găsit depozite de materiale pentru cizmărie în raza selectată. Încearcă să mărești raza de căutare.</div>`;
                 return;
             }
 
-            let html=`<h2>Am găsit ${stores.length} depozite de materiale pentru cizmărie:</h2>`;
+            let html=`<h2>Am găsit ${stores.length} locații:</h2>`;
             
-            // Also show center location's Plus Code
             html += `
             <div class="store-card" style="background:#f8f9fa;border-color:#667eea;">
                 <div class="store-header">
@@ -390,7 +344,7 @@
             </div>`;
             
             for(const s of stores){
-                const isShortened = s.shortCode.length < s.plusCode.replace('+', '').length;
+                const isShortened = s.shortCode !== s.plusCode;
                 
                 html+=`
                 <div class="store-card">
@@ -406,24 +360,26 @@
                         
                         <div class="coordinates-container">
                             <div>
-                                <strong>Coordonate tradiționale:</strong>
+                                <strong>Coordonate:</strong>
                                 <div class="coordinates">${s.lat.toFixed(6)}, ${s.lon.toFixed(6)}</div>
                             </div>
                             <div>
-                                <strong>Plus Code:</strong>
+                                <strong>Plus Code (Global):</strong>
                                 <div class="plus-code">
-                                    ${isShortened ? s.shortCode + ' (scurtat)' : s.plusCode}
+                                    ${s.plusCode}
                                     <button class="copy-btn" onclick="copyToClipboard('${s.plusCode}', this)">Copiază</button>
                                 </div>
+                                ${isShortened ? `
                                 <div class="plus-code-info">
-                                    ${isShortened ? `✔ Cod scurtat relativ la locația de căutare<br>Cod complet: ${s.plusCode}` : `Cod complet pentru navigare`}
-                                </div>
+                                    <strong>Plus Code scurtat:</strong> ${s.shortCode}<br>
+                                    <small>Folosește codul global pentru navigare precisă</small>
+                                </div>` : ''}
                             </div>
                         </div>
                         
                         <div class="navigation-links">
                             <div class="nav-instructions">
-                                <strong>Navigare:</strong> Apasă butonul pentru navigare cu indicații vocale.
+                                <strong>Navigare:</strong> Alege aplicația pentru a naviga către ușa exactă
                             </div>
                             <div class="nav-buttons">
                                 <a href="${PlusCode.getGoogleMapsUrl(s.plusCode)}" 
@@ -441,7 +397,7 @@
                                    class="nav-btn nav-btn-waze">
                                     🚦 Waze
                                 </a>
-                                <a href="https://plus.codes/${s.plusCode.replace('+', '%2B')}" 
+                                <a href="https://plus.codes/${s.plusCode}" 
                                    target="_blank"
                                    class="nav-btn plus-code-btn">
                                     🔗 Plus Code
@@ -449,7 +405,7 @@
                             </div>
                         </div>
                         
-                        ${s.website?`<div style="margin-top:15px;"><a href="${s.website}" target="_blank" style="color:#667eea;text-decoration:none;font-weight:600;">🌐 Vizitează Website-ul</a></div>`:""}
+                        ${s.website?`<div style="margin-top:15px;"><a href="${s.website}" target="_blank" style="color:#667eea;text-decoration:none;font-weight:600;">🌐 Website</a></div>`:""}
                     </div>
                 </div>`;
                 L.marker([s.lat,s.lon],{
@@ -461,14 +417,18 @@
                     <strong>${s.name}</strong><br>
                     ${s.address}<br>
                     <strong>Plus Code:</strong> ${s.plusCode}<br>
-                    <em>${s.distance.toFixed(2)} km distanță</em><br>
+                    <em>${s.distance.toFixed(2)} km</em><br>
                     <a href="${PlusCode.getGoogleMapsUrl(s.plusCode)}" target="_blank">🚗 Navighează</a>
                 `);
             }
             res.innerHTML=html;
+            
+            if(stores.length > 0){
+                const bounds = L.latLngBounds(stores.map(s => [s.lat, s.lon]).concat([[center.lat, center.lon]]));
+                map.fitBounds(bounds, {padding: [50, 50]});
+            }
         }
 
-        // Clipboard function
         function copyToClipboard(text, button) {
             navigator.clipboard.writeText(text).then(() => {
                 const originalText = button.textContent;
@@ -489,21 +449,6 @@
             });
         }
 
-        // Test Plus Code functionality
-        function testPlusCode() {
-            // Test coordinates for Bucharest
-            const testLat = 44.4268;
-            const testLon = 26.1025;
-            
-            const plusCode = PlusCode.encode(testLat, testLon, 10);
-            console.log('Plus Code for Bucharest (44.4268, 26.1025):', plusCode);
-            
-            const decoded = PlusCode.decode(plusCode.replace('+', ''));
-            console.log('Decoded:', decoded);
-            
-            return plusCode;
-        }
-
         document.getElementById("radius").addEventListener("input",e=>{
             document.getElementById("radiusValue").textContent=e.target.value;
         });
@@ -518,11 +463,6 @@
                 const c=await geocode(loc);
                 const stores=await findStoresAroundLocation(c,rad);
                 displayResults(stores,c,rad);
-                map.setView([c.lat,c.lon],12);
-                
-                // Test the Plus Code
-                console.log('Center Plus Code:', c.plusCode);
-                testPlusCode();
             }catch(e){err.textContent=e.message;err.classList.add("active")}
             loader.classList.remove("active");
         };
@@ -537,18 +477,22 @@
                 };
                 const rad=+document.getElementById("radius").value;
                 const loader=document.getElementById("loader");
+                const err=document.getElementById("error");
+                err.classList.remove("active");
                 loader.classList.add("active");
-                const stores=await findStoresAroundLocation(c,rad);
-                displayResults(stores,c,rad);
-                map.setView([c.lat,c.lon],12);
+                try{
+                    const stores=await findStoresAroundLocation(c,rad);
+                    displayResults(stores,c,rad);
+                }catch(e){err.textContent=e.message;err.classList.add("active")}
                 loader.classList.remove("active");
+            }, err=>{
+                const error=document.getElementById("error");
+                error.textContent="Nu s-a putut obține locația. Verifică permisiunile browser-ului.";
+                error.classList.add("active");
             });
         };
 
-        // Initialize and test
         initMap();
-        // Run a quick test on load
-        setTimeout(testPlusCode, 1000);
     </script>
 </body>
 </html>
