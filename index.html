@@ -40,6 +40,8 @@
         .nav-btn-google:hover{background:#3367d6}
         .nav-btn-apple{background:#000}
         .nav-btn-apple:hover{background:#333}
+        .nav-btn-waze{background:#33ccff}
+        .nav-btn-waze:hover{background:#1ab2ff}
         .loader{text-align:center;padding:40px;display:none}.loader.active{display:block}
         .spinner{border:4px solid #f3f3f3;border-top:4px solid #667eea;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;margin:0 auto 20px}
         @keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
@@ -213,6 +215,11 @@
                                    target="_blank"
                                    class="nav-btn nav-btn-apple">
                                     🍏 Apple Maps
+                                </a>
+                                <a href="https://www.waze.com/ul?ll=${s.lat},${s.lon}&navigate=yes" 
+                                   target="_blank"
+                                   class="nav-btn nav-btn-waze">
+                                    🚦 Waze
                                 </a>
                             </div>
                         </div>
