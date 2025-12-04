@@ -30,6 +30,7 @@
         .store-header{display:flex;justify-content:space-between;align-items:start;margin-bottom:15px}
         .store-name{font-size:1.3em;font-weight:700;color:#2c3e50}.distance{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:5px 15px;border-radius:20px;font-weight:600;font-size:.9em}
         .store-info{color:#555;line-height:1.8}.store-info strong{color:#2c3e50}
+        .coordinates{font-family:monospace;color:#666;font-size:0.9em;margin-top:8px;padding:6px 10px;background:#f8f9fa;border-radius:6px;display:inline-block}
         .loader{text-align:center;padding:40px;display:none}.loader.active{display:block}
         .spinner{border:4px solid #f3f3f3;border-top:4px solid #667eea;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;margin:0 auto 20px}
         @keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
@@ -187,6 +188,7 @@
                         <div><strong>Adresă:</strong> ${s.address}</div>
                         <div><strong>Telefon:</strong> ${s.phone}</div>
                         <div><strong>Program:</strong> ${s.opening_hours}</div>
+                        <div class="coordinates"><strong>Coordonate:</strong> lat: ${s.lat.toFixed(6)}, lon: ${s.lon.toFixed(6)}</div>
                         ${s.website?`<div><a href="${s.website}" target="_blank">Website</a></div>`:""}
                     </div>
                 </div>`;
