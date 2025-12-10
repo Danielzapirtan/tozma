@@ -1,0 +1,54 @@
+id,type,name,address,city,postcode,shop,craft,description,phone,website,latitude,longitude
+444379933,node,Depozit Pajura,,București,,,,,,,44.4842721,26.0477866
+622331840,node,Facultatea de Știința și Ingineria Materialelor,,București,,,,,,,44.439628,26.052754
+1756131491,node,Materiale de construcții și sanitare,,București,,doityourself,,,,,44.4626621,26.1338166
+2447114988,node,Materiale de Construcții,,București,,doityourself,,,,,44.4558786,26.1435583
+2479038612,node,Materiale de Construcții,Calea Călărașilor 147,București,,doityourself,,,,,44.4329616,26.1220934
+2517847598,node,Depozit Pajura,,București,,,,,,,44.484217,26.0481116
+2517847599,node,Depozit Pajura,,București,,,,,,,44.4842458,26.0480878
+2907494536,node,Depozitul de Calculatoare,,București,,computer,,,,,44.3953774,26.1165094
+2928473103,node,Brutărie,,București,,bakery,,,,,44.4663659,26.1163401
+2981657733,node,Piața En-Gros Antrefrig,,București,,,,,,,44.4469749,26.1509496
+3054738333,node,Confecții încălțăminte,,București,,,shoemaker,,,,44.4418255,26.1704178
+3481652524,node,N/A,,București,,,shoemaker,,,,44.4401585,26.0859397
+4092211385,node,Reparații încălțăminte,Bulevardul Corneliu Coposu 4,București,030605,,shoemaker,,,,44.4305701,26.1085506
+4151093789,node,Reparații încălțăminte,Strada Sergent Nițu Vasile,București,,,shoemaker,,,,44.3874632,26.110333
+4151093889,node,Reparații încălțăminte,,București,,,shoemaker,,,,44.3883092,26.1160945
+4847746029,node,Depozit NextGen Communications,Șoseaua Viilor 52-54,București,,hifi,,,,https://www.next-gen.ro/,44.409557,26.0863206
+5349193541,node,Complex materiale de construcții,,București,,doityourself,,,,,44.4126436,26.1283326
+5907734971,node,Depozit de parbrize,,București,,car_parts,,,,,44.4203906,26.0718641
+6053537391,node,La Vasile Cizmarul,Bulevardul Iuliu Maniu 71,București,061088,shoe_repair,shoemaker,,+40 765 789 0765789652652,,44.4335996,26.0137829
+6782601811,node,Confecții încălțăminte,,București,,,shoemaker,,,,44.4421472,26.1425973
+7061526380,node,intrare depozit,,București,,,,,,,44.4070141,26.2123698
+8382137930,node,Depozit Pajura,,București,,,,,,,44.4842154,26.0477992
+8419814717,node,depozit SOMARO - Magazinul Social,Drumul Între Tarlale 42,București,,,,,,,44.425223,26.2201579
+10629462083,node,Birou notar public Pieleanu Daniela,,București,,,,,,,44.4146912,26.108648
+11412889303,node,Maurana,Drumul Dealul Bradului 50-80,București,042158,wholesale,,,+40 745 155 430,https://maurana.eu/,44.3610569,26.1286414
+11694514497,node,Cizmarie,,București,,,shoemaker,,,,44.4380413,26.1140775
+12072839241,node,Euromaster Depozitul de Baterii,Intrarea Ciurului 20,București,,car_parts,,,+40748632886,,44.3771594,26.121715
+12176130583,node,Materiale de Construcții,,București,,hardware,,,,,44.4632057,26.0572796
+12281553929,node,Brutărie Turcească pe Vatră,,București,,,bakery,,,,44.3885081,26.0928471
+12294255218,node,N/A,,București,,trade,,,,,44.4483863,26.1297738
+13249069665,node,Brutărie - Pâine pe vatră,,București,,bakery,,,,,44.4604141,26.0467368
+23740442,way,Strada Depozitului,,București,,,,,,,44.4287745,26.1993912
+23740593,way,Strada Depozitului,,București,,,,,,,44.4252826,26.1979549
+39932423,way,"UTCB - Departamentul de Rezistenta Materialelor, Poduri si Tuneluri",,București,,,,,,,44.4640134,26.1257316
+145394307,way,Depozit librarie vitan,Strada Vlaicu Vodă 19,București,,,,,,,44.418477,26.1265242
+154317134,way,Materiale de construcții,,București,,,,,,,44.4240831,26.1741066
+173567212,way,Casa Rusu Depozit,,București,,,,,,,44.4318386,26.174431
+244446578,way,Depozit RADCOM Orange,Șoseaua Odăii 81,București,,,,,,,44.5325141,26.0618822
+257260060,way,Materiale de construc'ii,Bulevardul Pieptănari 105A,București,,,,,,,44.3973083,26.0852332
+264350116,way,Depozit materiale BADUC,,București,,,,,,,44.383284,26.0869894
+264362498,way,Depozit materiale pentru instalații,,București,,,,,,,44.3849745,26.0875001
+276814594,way,Toyota Material Handling,,București,,,,,,,44.3495295,26.1570627
+318991472,way,Intrarom Depozit,Șoseaua Fabrica de Glucoză 17,București,,,,,,,44.4799742,26.1224392
+331848959,way,Laboratorul Central pentru Calitatea Semintelor si a Materialului Saditor Bucuresti,Aleea Constantin Sandu-Aldea 10,București,012065,,,,021 224 02 64,https://www.lccsms.bvl.ro/,44.4687186,26.0622066
+436014268,way,depozituldemartisoare.ro,,București,,,,,,,44.4079892,26.187166
+436014269,way,depozituldemartisoare.ro,,București,,,,,,,44.4076849,26.1870533
+464847755,way,Depozitul de Baterii,Intrarea Ciurului 20,București,,,,,,,44.3771346,26.1217696
+547400449,way,Depozit en gros Chirigiu,,București,,wholesale,,,,,44.4180391,26.0794308
+554038001,way,Depozit de Produs Finit,,București,,,,,,,44.4059542,26.1904946
+554561033,way,STRAUSS depozit,,București,,,,,,,44.4007421,26.2088054
+745723980,way,Depozit abandonat,,București,,,,,,,44.4018958,26.1928986
+1083861536,way,Depozit vehicule ridicate Sector 3,,București,,,,,,,44.401971,26.150301
+1190212639,way,Depozit mașini ridicate - Primăria Sectorului 2,,București,,,,,,,44.4533898,26.14982
